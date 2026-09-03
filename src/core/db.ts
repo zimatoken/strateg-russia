@@ -310,6 +310,33 @@ export async function getAllMessageChatIds(): Promise<string[]> {
   });
 }
 
+export async function getUnreadCountByContext(contextType: string, contextId: string, currentUserId?: string): Promise<number> {
+  if (useFallback) {
+    const all = Array.from(fallbackMemory.values()).flat();
+    return all.filter(m => m.context && m.context.type === contextType && m.context.id === contextId && !m.isUser && m.status !== 'read' && (!currentUserId || m.to === currentUserId)).length;
+  }
+
+  if (!db) await openDB();
+
+  return new Promise<number>((resolve, reject) => {
+    try {
+      const transaction = db!.transaction([MESSAGES_STORE], 'readonly');
+      const store = transaction.objectStore(MESSAGES_STORE);
+      const index = store.index('contextId');
+      const request = index.getAll(contextId);
+
+      request.onsuccess = () => {
+        const messages = (request.result as MessageRecord[]).filter(m => m.context && m.context.type === contextType && !m.isUser && m.status !== 'read' && (!currentUserId || m.to === currentUserId));
+        resolve(messages.length);
+      };
+
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 export async function updateChatMeta(chatId: string, meta: Partial<ChatRecord>): Promise<void> {
   if (useFallback) {
     const existing = fallbackChats.get(chatId);

@@ -1,10 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ContextChat } from '../components/ContextChat';
+import { getUnreadCountByContext } from '../core/db';
 
 export default function BarterPage() {
   const { t } = useLanguage();
   const [chatContext, setChatContext] = useState<{ type: 'deal' | 'barter' | 'project'; id: string; title: string } | null>(null);
+
+  const [offers] = useState(() => [
+    { id: 'barter-1', title: 'Обмен консалтинга на маркетинг', description: 'Предлагаю 10 часов консалтинга в обмен на продвижение' },
+    { id: 'barter-2', title: 'Бартер оборудование ↔ услуги', description: 'Обсуждение поставки и настройки' }
+  ]);
+
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const map: Record<string, number> = {};
+      for (const o of offers) {
+        try {
+          const count = await getUnreadCountByContext('barter', o.id);
+          if (mounted) map[o.id] = count;
+        } catch {
+          if (mounted) map[o.id] = 0;
+        }
+      }
+      if (mounted) setUnreadMap(map);
+    };
+    load();
+    return () => { mounted = false; };
+  }, [offers]);
 
   return (
     <section className="strateg-page">
@@ -16,14 +42,24 @@ export default function BarterPage() {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="strateg-primary-btn">{t('barter_create')}</button>
-          <button className="strateg-secondary-btn" onClick={() => setChatContext({ type: 'barter', id: 'barter-demo-1', title: 'Демонстрационное предложение' })}>{t('chat_open')}</button>
         </div>
       </div>
-      <div className="strateg-empty-module">
-        <span>↔</span>
-        <h2>{t('barter_empty_title')}</h2>
-        <p>{t('barter_empty_desc')}</p>
+
+      <div className="strateg-card-list">
+        {offers.map((offer) => (
+          <div key={offer.id} className="strateg-barter-card">
+            <div className="strateg-barter-card-main">
+              <h3>{offer.title}</h3>
+              <p>{offer.description}</p>
+            </div>
+            <div className="strateg-barter-card-actions">
+              <button className="strateg-icon-btn" title={t('chat_open_barter')} onClick={() => setChatContext({ type: 'barter', id: offer.id, title: offer.title })}>💬</button>
+              {unreadMap[offer.id] > 0 && <span className="strateg-badge">{unreadMap[offer.id]}</span>}
+            </div>
+          </div>
+        ))}
       </div>
+
       {chatContext && (
         <div className="strateg-modal-overlay">
           <div className="strateg-modal-content">

@@ -1,10 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ContextChat } from '../components/ContextChat';
+import { getUnreadCountByContext } from '../core/db';
 
 export default function DealsPage() {
   const { t } = useLanguage();
   const [chatContext, setChatContext] = useState<{ type: 'deal' | 'barter' | 'project'; id: string; title: string } | null>(null);
+  // Пример списка сделок — заменить реальными данными
+  const [deals] = useState(() => [
+    { id: 'deal-1', title: 'Переговоры с Партнёром А', description: 'Условия поставки и оплаты' },
+    { id: 'deal-2', title: 'Сделка с Клиентом Б', description: 'Долгосрочное сотрудничество' }
+  ]);
+
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const map: Record<string, number> = {};
+      for (const d of deals) {
+        try {
+          const count = await getUnreadCountByContext('deal', d.id);
+          if (mounted) map[d.id] = count;
+        } catch {
+          if (mounted) map[d.id] = 0;
+        }
+      }
+      if (mounted) setUnreadMap(map);
+    };
+    load();
+    return () => { mounted = false; };
+  }, [deals]);
 
   return (
     <section className="strateg-page">
@@ -16,16 +42,33 @@ export default function DealsPage() {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="strateg-primary-btn">{t('deals_new')}</button>
-          <button className="strateg-secondary-btn" onClick={() => setChatContext({ type: 'deal', id: 'deal-demo-1', title: 'Демонстрационная сделка' })}>{t('chat_open')}</button>
         </div>
       </div>
+
       <div className="strateg-deal-columns">
         <div>
           <h2>{t('deals_in_progress')}</h2>
-          <div className="strateg-empty-module compact">
-            <span>◌</span>
-            <p>{t('deals_no_active')}</p>
-          </div>
+          {deals.length === 0 ? (
+            <div className="strateg-empty-module compact">
+              <span>◌</span>
+              <p>{t('deals_no_active')}</p>
+            </div>
+          ) : (
+            <div className="strateg-card-list">
+              {deals.map((deal) => (
+                <div key={deal.id} className="strateg-deal-card">
+                  <div className="strateg-deal-card-main">
+                    <h3>{deal.title}</h3>
+                    <p>{deal.description}</p>
+                  </div>
+                  <div className="strateg-deal-card-actions">
+                    <button className="strateg-icon-btn" title={t('chat_open_deal')} onClick={() => setChatContext({ type: 'deal', id: deal.id, title: deal.title })}>💬</button>
+                    {unreadMap[deal.id] > 0 && <span className="strateg-badge">{unreadMap[deal.id]}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <h2>{t('deals_completed')}</h2>
@@ -35,6 +78,7 @@ export default function DealsPage() {
           </div>
         </div>
       </div>
+
       {chatContext && (
         <div className="strateg-modal-overlay">
           <div className="strateg-modal-content">
