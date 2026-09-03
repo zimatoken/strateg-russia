@@ -12,7 +12,7 @@ export default function ContactAvatar({
   size = 48, 
   fallback
 }: ContactAvatarProps) {
-  const avatarPath = getAvatarPath(avatarId);
+  const avatarPath = avatarId ? getAvatarPath(avatarId) : getAvatarPath('default');
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const nextSrc = fallback ? getAvatarPath(fallback) : getAvatarPath('avatar-man');
