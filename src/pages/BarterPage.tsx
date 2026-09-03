@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ContextChat } from '../components/ContextChat';
 import useDataStore from '../hooks/useDataStore';
+import { onBroadcast } from '../core/broadcast';
 
 export default function BarterPage() {
   const { t } = useLanguage();
@@ -27,7 +28,12 @@ export default function BarterPage() {
       if (mounted) setUnreadMap(map);
     };
     load();
-    return () => { mounted = false; };
+    const unsub = onBroadcast((msg) => {
+      if (msg.type === 'NEW_MESSAGE' || msg.type === 'MESSAGE_DELETED' || msg.type === 'CHAT_CLEARED' || msg.type === 'CHAT_SWITCH' || msg.type === 'MESSAGE_READ') {
+        load();
+      }
+    });
+    return () => { mounted = false; unsub(); };
   }, [offers]);
 
   return (

@@ -268,6 +268,7 @@ export interface DialogCore {
     action: 'create' | 'join' | 'leave';
     userId?: string;
   }) => void): () => void;
+  sendRawData?(data: any): void;
 }
 
 // Реализация ядра
@@ -551,7 +552,7 @@ export class StrategDialogCore implements DialogCore {
       this.transport = new P2PTransport(this.identity.getDeviceId());
 
       // Настраиваем callbacks
-      this.transport.onMessage((data) => {
+      this.transport.onMessage(async (data) => {
         try {
           // CHUNK handling (assemble on client)
           if (data.type === 'CHUNK') {
@@ -659,6 +660,26 @@ export class StrategDialogCore implements DialogCore {
             this.lastPong = Date.now();
             this.missedPings = 0;
             console.log('🏓 PONG received');
+          } else if (data.type === 'DATA_SYNC') {
+            try {
+              // динамический импорт, чтобы избежать циклической зависимости
+              const mod = await import('./dataStore');
+              const ds = mod.dataStore || mod.default;
+              const payload = (data as any).payload ?? (data as any).data ?? data;
+              if (ds && typeof ds.importData === 'function') {
+                ds.importData(payload);
+                // если при импорте установлен флаг конфликта, сообщаем UI
+                if (typeof ds.getSyncStatus === 'function' && ds.getSyncStatus() === 'conflict') {
+                  this.notifyError('Конфликт данных при синхронизации');
+                } else {
+                  sendBroadcast('DATA_SYNC_APPLIED', { timestamp: Date.now() });
+                }
+              }
+            } catch (err) {
+              console.error('Failed to apply DATA_SYNC', err);
+              this.notifyError('Не удалось применить синхронизацию данных');
+            }
+            return;
           } else if (data.type === 'ERROR') {
             console.error('STRATEG transport error:', data.error);
             this.notifyError(data.error || 'Unknown error');
@@ -770,6 +791,20 @@ export class StrategDialogCore implements DialogCore {
       currentStrategId: null,
       hasPeer: false
     });
+  }
+
+  // Send raw data over transport (used by DataStore sync)
+  sendRawData(data: any): void {
+    if (this.transport && this.transport.isConnected()) {
+      try {
+        this.transport.send(JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to send raw data via transport', err);
+      }
+    } else {
+      console.warn('Transport not connected - cannot send raw data');
+      this.notifyError('Transport not connected');
+    }
   }
 
   async sendMessage(to: string, text: string, files?: File[], replyTo?: ReplyTo, context?: Message['context']): Promise<void> {
