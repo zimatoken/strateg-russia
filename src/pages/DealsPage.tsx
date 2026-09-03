@@ -1,3 +1,6 @@
+import { useLanguage } from '../context/LanguageContext';
+
 export default function DealsPage() {
-  return <section className="strateg-page"><div className="strateg-page-heading"><div><span className="strateg-eyebrow">Переговоры</span><h1>Сделки</h1><p>Ведите переговоры и держите ключевые договорённости в одном месте.</p></div><button className="strateg-primary-btn">Новая сделка</button></div><div className="strateg-deal-columns"><div><h2>В работе</h2><div className="strateg-empty-module compact"><span>◌</span><p>Активных сделок пока нет</p></div></div><div><h2>Завершённые</h2><div className="strateg-empty-module compact"><span>✓</span><p>История появится после первой сделки</p></div></div></div></section>;
+  const { t } = useLanguage();
+  return <section className="strateg-page"><div className="strateg-page-heading"><div><span className="strateg-eyebrow">{t('negotiations_category')}</span><h1>{t('deals_title')}</h1><p>{t('deals_heading_description')}</p></div><button className="strateg-primary-btn">{t('deals_new')}</button></div><div className="strateg-deal-columns"><div><h2>{t('deals_in_progress')}</h2><div className="strateg-empty-module compact"><span>◌</span><p>{t('deals_no_active')}</p></div></div><div><h2>{t('deals_completed')}</h2><div className="strateg-empty-module compact"><span>✓</span><p>{t('deals_no_history')}</p></div></div></div></section>;
 }

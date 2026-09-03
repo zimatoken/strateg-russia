@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { COURSE_QUIZZES, calculateQuizResult } from '../modules/course';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function CoursePage() {
+  const { t } = useLanguage();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResult, setShowResult] = useState(false);
   const questions = Object.values(COURSE_QUIZZES).flat();
@@ -11,11 +13,11 @@ export default function CoursePage() {
     <section className="strateg-page">
       <div className="strateg-page-heading">
         <div>
-          <span className="strateg-eyebrow">Диагностика</span>
-          <h1>Курс бизнеса</h1>
-          <p>Короткая оценка текущего положения компании и точек роста.</p>
+          <span className="strateg-eyebrow">{t('diagnostics_category')}</span>
+          <h1>{t('course_title')}</h1>
+          <p>{t('course_description')}</p>
         </div>
-        <span className="strateg-page-count">{questions.length} вопросов</span>
+        <span className="strateg-page-count">{questions.length} {t('course_questions_count')}</span>
       </div>
       <div className="strateg-question-list">
         {questions.map((question) => (
@@ -32,8 +34,8 @@ export default function CoursePage() {
           </article>
         ))}
       </div>
-      <button className="strateg-primary-btn" onClick={() => setShowResult(true)}>Получить диагностику</button>
-      {showResult && <div className="strateg-result"><strong>{Math.round(result.percentage)}%</strong><span>Стратегическая готовность</span></div>}
+      <button className="strateg-primary-btn" onClick={() => setShowResult(true)}>{t('course_get_diagnostic')}</button>
+      {showResult && <div className="strateg-result"><strong>{Math.round(result.percentage)}%</strong><span>{t('course_strategic_readiness')}</span></div>}
     </section>
   );
 }

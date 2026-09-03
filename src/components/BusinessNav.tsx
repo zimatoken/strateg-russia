@@ -1,25 +1,27 @@
 import { getEnabledModules, type BusinessModule } from '../modules/registry';
+import { useLanguage } from '../context/LanguageContext';
 
 interface BusinessNavProps {
   onModuleSelect: (module: BusinessModule) => void;
   activeModule?: BusinessModule;
 }
 
-const categoryNames: Record<string, string> = {
-  diagnostics: 'Диагностика',
-  planning: 'Планирование',
-  exchange: 'Обмен',
-  negotiation: 'Переговоры',
-};
-
 export default function BusinessNav({ onModuleSelect, activeModule }: BusinessNavProps) {
+  const { t } = useLanguage();
   const modules = getEnabledModules();
+
+  const categoryNames: Record<string, string> = {
+    diagnostics: t('diagnostics_category'),
+    planning: t('planning_category'),
+    exchange: t('exchange_category'),
+    negotiation: t('negotiations_category'),
+  };
 
   return (
     <nav className="strateg-nav" aria-label="Бизнес-модули">
       <div className="strateg-nav-brand">
         <span className="strateg-nav-mark">S</span>
-        <div><strong>СТРАТЕГ</strong><small>для бизнеса</small></div>
+        <div><strong>{t('app_title')}</strong><small>{t('app_subtitle')}</small></div>
       </div>
       <div className="strateg-nav-list">
         {modules.map((module) => (
@@ -29,7 +31,7 @@ export default function BusinessNav({ onModuleSelect, activeModule }: BusinessNa
           </button>
         ))}
       </div>
-      <div className="strateg-nav-footer"><span className="strateg-status-dot" /> P2P подключён</div>
+      <div className="strateg-nav-footer"><span className="strateg-status-dot" /> P2P {t('status_connected')}</div>
     </nav>
   );
 }
