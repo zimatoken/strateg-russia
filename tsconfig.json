@@ -31,22 +31,12 @@
     }
   },
   "include": [
-    "src/main.tsx",
-    "src/App.tsx",
-    "src/core/**/*",
-    "src/components/QRShare.tsx",
-    "src/components/ui/**/*",
-    "src/components/strateg-russia/**/*",
-    "src/hooks/**/*",
-    "server/**/*",
+    "src/**/*",
     "tests/**/*",
     "http-server.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "src/src",
-    "backend",
-    "src/components/strateg-russia/index.ts"
+    "dist"
   ]
 }
