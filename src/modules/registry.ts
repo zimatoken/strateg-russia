@@ -7,7 +7,7 @@ export interface BusinessModule {
   title: string;
   description: string;
   icon: string;
-  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation';
+  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation' | 'analytics';
   enabled: boolean;
   order: number;
 }
@@ -56,6 +56,17 @@ export const BUSINESS_MODULES: BusinessModule[] = [
     category: 'negotiation',
     enabled: true,
     order: 4
+  },
+  // Модуль аналитики
+  {
+    id: 'analytics',
+    path: '/analytics',
+    title: 'Аналитика',
+    description: 'Статистика и прогресс',
+    icon: '📊',
+    category: 'analytics',
+    enabled: true,
+    order: 5
   }
 ];
 
