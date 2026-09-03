@@ -9,6 +9,7 @@ import BarterPage from './pages/BarterPage';
 import DealsPage from './pages/DealsPage';
 import Dashboard from './pages/Dashboard';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ChatsPage from './pages/ChatsPage';
 import { getDialogCore } from './core/dialogCore';
 import {
   clearDeepLinkUrl,
@@ -62,6 +63,7 @@ function App() {
   const renderContent = () => {
     if (path === '/dashboard') return <Dashboard />;
     if (path === '/analytics') return <AnalyticsPage />;
+    if (path === '/chats') return <ChatsPage />;
     if (path === '/modules/course') return <CoursePage />;
     if (path === '/modules/plan') return <PlanPage />;
     if (path === '/modules/barter') return <BarterPage />;

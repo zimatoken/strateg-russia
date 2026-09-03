@@ -7,7 +7,7 @@ export interface BusinessModule {
   title: string;
   description: string;
   icon: string;
-  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation' | 'analytics';
+  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation' | 'analytics' | 'chats';
   enabled: boolean;
   order: number;
 }
@@ -67,6 +67,17 @@ export const BUSINESS_MODULES: BusinessModule[] = [
     category: 'analytics',
     enabled: true,
     order: 5
+  },
+  // Модуль чатов
+  {
+    id: 'chats',
+    path: '/chats',
+    title: 'Чаты',
+    description: 'Контекстные чаты',
+    icon: '💬',
+    category: 'chats',
+    enabled: true,
+    order: 6
   }
 ];
 

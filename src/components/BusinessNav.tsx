@@ -16,6 +16,7 @@ export default function BusinessNav({ onModuleSelect, activeModule }: BusinessNa
     exchange: t('exchange_category'),
     negotiation: t('negotiations_category'),
     analytics: t('analytics_category'),
+    chats: t('chats_title'),
   };
 
   return (

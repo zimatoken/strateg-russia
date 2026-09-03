@@ -13,7 +13,7 @@ export interface UseDialogCoreReturn {
   // Действия
   connect: () => void;
   disconnect: () => void;
-  sendMessage: (to: string, text: string, files?: File[], replyTo?: ReplyTo) => void;
+  sendMessage: (to: string, text: string, files?: File[], replyTo?: ReplyTo, context?: Message['context']) => void;
   loadHistory: (chatId: string) => Promise<MessageRecord[]>;
   switchChat: (chatId: string) => void;
   onChatSwitch: (callback: (chatId: string) => void) => () => void;
@@ -63,8 +63,8 @@ export const useDialogCore = (): UseDialogCoreReturn => {
     core.disconnect();
   }, [core]);
 
-  const sendMessage = useCallback((to: string, text: string, files?: File[], replyTo?: ReplyTo) => {
-    core.sendMessage(to, text, files, replyTo).catch(err => console.error(err));
+  const sendMessage = useCallback((to: string, text: string, files?: File[], replyTo?: ReplyTo, context?: Message['context']) => {
+    core.sendMessage(to, text, files, replyTo, context).catch(err => console.error(err));
   }, [core]);
 
   const onError = useCallback((callback: (error: string) => void) => {

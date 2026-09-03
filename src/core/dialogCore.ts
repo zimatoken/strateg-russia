@@ -219,6 +219,11 @@ export interface Message {
   readAt?: number;
   replyTo?: ReplyTo;
   isEncrypted?: boolean; // STAGE8: E2EE indicator
+  context?: {
+    type: 'deal' | 'barter' | 'project';
+    id: string;
+    title: string;
+  };
 }
 
 export type { MessageRecord } from './db';
@@ -233,12 +238,12 @@ export interface ConnectionState {
 export interface DialogCore {
   // Состояние
   getConnectionState(): ConnectionState;
-  getMessages(): Message[];
+  getMessages(context?: Message['context']): Message[];
 
   // Действия
   connect(): Promise<void>;
   disconnect(): void;
-  sendMessage(to: string, text: string, files?: File[], replyTo?: ReplyTo): Promise<void>;
+  sendMessage(to: string, text: string, files?: File[], replyTo?: ReplyTo, context?: Message['context']): Promise<void>;
   loadHistory(chatId: string): Promise<MessageRecord[]>;
   switchChat(chatId: string): void;
   deleteMessage(messageId: string): Promise<void>;
@@ -514,8 +519,13 @@ export class StrategDialogCore implements DialogCore {
     return { ...this.connectionState };
   }
 
-  getMessages(): Message[] {
-    return [...this.messages];
+  getMessages(context?: Message['context']): Message[] {
+    if (!context) {
+      return [...this.messages];
+    }
+    return this.messages.filter(msg => 
+      msg.context?.type === context.type && msg.context?.id === context.id
+    );
   }
 
   async connect(): Promise<void> {
@@ -762,7 +772,7 @@ export class StrategDialogCore implements DialogCore {
     });
   }
 
-  async sendMessage(to: string, text: string, files?: File[], replyTo?: ReplyTo): Promise<void> {
+  async sendMessage(to: string, text: string, files?: File[], replyTo?: ReplyTo, context?: Message['context']): Promise<void> {
     if (!this.transport || !this.transport.isConnected()) {
       console.error('Transport not connected');
       this.notifyError('Не удалось отправить: нет соединения');
@@ -828,6 +838,7 @@ export class StrategDialogCore implements DialogCore {
       files: attachments.length ? attachments : undefined,
       status: 'sent',
       replyTo,
+      context,
     };
 
     this.messages.push(userMessage);

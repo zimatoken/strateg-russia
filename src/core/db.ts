@@ -14,6 +14,11 @@ export interface MessageRecord {
   status?: 'sent' | 'delivered' | 'read';
   readAt?: number;
   replyTo?: ReplyTo;
+  context?: {
+    type: 'deal' | 'barter' | 'project';
+    id: string;
+    title?: string;
+  };
 }
 
 export interface ChatRecord {
@@ -55,7 +60,7 @@ export interface ContactKey {
 }
 
 const DB_NAME = 'strateg-russia';
-const DB_VERSION = 4; // STAGE8: incremented for key storage
+const DB_VERSION = 5; // STAGE8: incremented for key storage; bumped to add context indexes
 const MESSAGES_STORE = 'messages';
 const CHATS_STORE = 'chats';
 const CONTACTS_STORE = 'contacts';
@@ -96,6 +101,9 @@ export async function openDB(): Promise<void> {
           const messagesStore = database.createObjectStore(MESSAGES_STORE, { keyPath: 'id' });
           messagesStore.createIndex('chatId', 'chatId', { unique: false });
           messagesStore.createIndex('timestamp', 'timestamp', { unique: false });
+          // Индексы для быстрого поиска по контексту
+          messagesStore.createIndex('contextType', 'context.type', { unique: false });
+          messagesStore.createIndex('contextId', 'context.id', { unique: false });
         }
 
         // Создание хранилища чатов
@@ -226,6 +234,38 @@ export async function getMessages(chatId: string, limit?: number): Promise<Messa
     };
 
     request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getMessagesByContext(contextType: string, contextId: string, limit?: number): Promise<MessageRecord[]> {
+  if (useFallback) {
+    const all = Array.from(fallbackMemory.values()).flat();
+    const filtered = all.filter(m => m.context && m.context.type === contextType && m.context.id === contextId);
+    const sorted = filtered.sort((a, b) => a.timestamp - b.timestamp);
+    return limit ? sorted.slice(-limit) : sorted;
+  }
+
+  if (!db) await openDB();
+
+  return new Promise<MessageRecord[]>((resolve, reject) => {
+    try {
+      const transaction = db!.transaction([MESSAGES_STORE], 'readonly');
+      const store = transaction.objectStore(MESSAGES_STORE);
+      // Use contextId index to narrow results
+      const index = store.index('contextId');
+      const request = index.getAll(contextId);
+
+      request.onsuccess = () => {
+        let messages = (request.result as MessageRecord[]).filter(m => m.context && m.context.type === contextType);
+        messages = messages.sort((a, b) => a.timestamp - b.timestamp);
+        if (limit) messages = messages.slice(-limit);
+        resolve(messages);
+      };
+
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
