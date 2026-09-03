@@ -1,15 +1,23 @@
-﻿import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
+﻿import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/",
+  base: "/strateg-russia/", // 👈 ГЛАВНОЕ ИСПРАВЛЕНИЕ — для GitHub Pages
   build: {
     outDir: "dist",
-    sourcemap: true
+    sourcemap: true,
+    // Опционально: можно уменьшить размер чанков
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+        },
+      },
+    },
   },
   server: {
     port: 5173,
-    host: true
-  }
-})
+    host: true,
+  },
+});
