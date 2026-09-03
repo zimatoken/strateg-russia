@@ -3,22 +3,85 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>STRATEG-RUSSIA</title>
-    <meta name="description" content="STRATEG-RUSSIA: Объединенный мессенджер с философией тишины" />
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- 🔥 БЛОК ДЛЯ PWA / МОБИЛЬНЫХ УСТРОЙСТВ (добавлен Turbo ZX)   -->
+    <!-- 🔥 ОСНОВНЫЕ МЕТА-ТЕГИ                                         -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <meta name="theme-color" content="#3b82f6" />
+    <title>🧭 СТРАТЕГ — Бизнес-платформа для России</title>
+    <meta name="description" content="🧭 СТРАТЕГ ДЛЯ БИЗНЕСА В РОССИИ — P2P-платформа: курс, план, бартер, сделки. Работает без интернета и без сервера." />
+    <meta name="keywords" content="бизнес, стратегия, план, бартер, сделки, P2P, Россия, стартап" />
+    <meta name="author" content="STRATEG-RUSSIA Team" />
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🔥 PWA / МОБИЛЬНЫЕ УСТРОЙСТВА (иконки + манифест)            -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <meta name="theme-color" content="#0f172a" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <!-- ═══════════════════════════════════════════════════════════════ -->
 
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🔥 OPEN GRAPH (для соцсетей)                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <meta property="og:title" content="🧭 СТРАТЕГ — Бизнес-платформа для России" />
+    <meta property="og:description" content="P2P-платформа для бизнеса: курс, план, бартер, сделки. Работает офлайн." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://zimatoken.github.io/strateg-russia/" />
+    <meta property="og:image" content="https://zimatoken.github.io/strateg-russia/icon-512.png" />
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🔥 ИКОНКА ВКЛАДКИ (favicon)                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🔥 СТИЛИ (проверка: если стили не подгружаются — грузим здесь) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <style>
+      /* Минимальные стили для предотвращения белого экрана */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        min-height: 100vh;
+        background: #0f172a;
+        color: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      }
+      #root {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      /* Загрузочный спиннер */
+      #root:empty::after {
+        content: '🧭 Загрузка СТРАТЕГ...';
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-size: 20px;
+        color: #94a3b8;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+    </style>
   </head>
+
   <body>
     <div id="root"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🔥 ОСНОВНОЙ JS (React-приложение)                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
