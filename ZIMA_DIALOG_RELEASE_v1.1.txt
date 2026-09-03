@@ -1,0 +1,36 @@
+ STRATEG-RUSSIA v1.1 - ДОСТУПЕН ДЛЯ ВСЕХ! 
+
+ ЧТО ВЫПУЩЕНО:
+- Версия: 1.1 "Universal Access"
+- Дата: $(Get-Date -Format 'dd.MM.yyyy')
+- Статус:  ГОТОВ К ИСПОЛЬЗОВАНИЮ
+
+ ОСОБЕННОСТИ:
+-  AI чат с контекстными ответами
+-  Адаптивный дизайн для всех устройств
+-  СТРАТЕГ Hybrid Ice/Dark UI
+-  Быстрые ответы
+-  Безопасное общение
+
+ ПОДДЕРЖИВАЕМЫЕ УСТРОЙСТВА:
+-  Компьютеры (Windows, Mac, Linux)
+-  iPhone (iOS)
+-  Android телефоны
+-  Планшеты
+-  Ноутбуки
+
+ ССЫЛКИ:
+- GitHub: https://github.com/zimatoken/zima-golden-spiral
+- Frontend: http://localhost:5173 (после запуска)
+- Backend: http://localhost:3000 (после запуска)
+
+ КАК ЗАПУСТИТЬ:
+1. cd "D:\zima-golden spiral"
+2. npm run dev
+3. Открыть http://localhost:5173
+
+ ОСОБАЯ БЛАГОДАРНОСТЬ:
+- Максим - за идею и создание СТРАТЕГ экосистемы
+- Все будущие пользователи STRATEG-RUSSIA!
+
+ STRATEG-RUSSIA ОТКРЫТ ДЛЯ ВСЕГО МИРА!

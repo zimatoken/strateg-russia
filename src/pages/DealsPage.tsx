@@ -1,0 +1,3 @@
+export default function DealsPage() {
+  return <section className="strateg-page"><div className="strateg-page-heading"><div><span className="strateg-eyebrow">Переговоры</span><h1>Сделки</h1><p>Ведите переговоры и держите ключевые договорённости в одном месте.</p></div><button className="strateg-primary-btn">Новая сделка</button></div><div className="strateg-deal-columns"><div><h2>В работе</h2><div className="strateg-empty-module compact"><span>◌</span><p>Активных сделок пока нет</p></div></div><div><h2>Завершённые</h2><div className="strateg-empty-module compact"><span>✓</span><p>История появится после первой сделки</p></div></div></div></section>;
+}

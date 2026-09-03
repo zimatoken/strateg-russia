@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  zima-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"   # HTTP API
+      - "8080:8080"   # WebSocket
+      - "5173:5173"   # Vite dev (опционально)
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - WS_PORT=8080
+    restart: unless-stopped
+    volumes:
+      - zima-data:/app/data
+    networks:
+      - zima-network
+
+  # Опционально: Nginx для проксирования
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
+  #     - ./dist:/usr/share/nginx/html
+  #   depends_on:
+  #     - zima-app
+  #   networks:
+  #     - zima-network
+
+volumes:
+  zima-data:
+
+networks:
+  zima-network:
+    driver: bridge

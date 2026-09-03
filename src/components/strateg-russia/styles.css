@@ -1,0 +1,539 @@
+/* ===========================
+   СТРАТЕГ HYBRID ICE/DARK UI
+   =========================== */
+
+/* Глобальный фон */
+.strateg-russia-container {
+  background: radial-gradient(circle at 20% 20%, #0f172a 0%, #0b1220 40%, #070b13 80%);
+  border-radius: 20px;
+  padding: 15px;
+  box-shadow: 0 0 60px rgba(0, 150, 255, 0.15);
+  backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Body layout - для нашего strateg-body */
+.strateg-body {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Chat panel - для нашего strateg-chat */
+.strateg-chat {
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent 40%);
+  border: 1px solid rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+}
+
+/* Messages area - для наших messages */
+.messages {
+  flex: 1;
+  overflow: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+/* Thin frosty scrollbar */
+.messages::-webkit-scrollbar { width: 8px; }
+.messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(140,200,255,0.12), rgba(140,200,255,0.06));
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* Message row - для наших msg-row */
+.msg-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  max-width: 100%;
+}
+
+/* Avatar - для наших avatar */
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(2,10,30,0.3);
+}
+
+.avatar-ai {
+  background: radial-gradient(circle at 30% 25%, #fbffff 0%, #dff7ff 22%, #a9e3ff 60%, rgba(120,200,255,0.14) 100%);
+  border: 1px solid var(--glass-strong);
+}
+
+.avatar-user {
+  background: radial-gradient(circle at 25% 25%, #11151B 0%, #091021 60%, rgba(5,8,12,1) 100%);
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* Bubble base - для наших msg-bubble */
+.msg-bubble {
+  position: relative;
+  padding: 12px 16px;
+  border-radius: 12px;
+  line-height: 1.36;
+  max-width: 78%;
+  word-break: break-word;
+  transition: transform 220ms cubic-bezier(.2,.9,.3,1), box-shadow 220ms;
+  backdrop-filter: blur(8px) saturate(150%);
+}
+
+/* AI bubble: ICE GLASS PREMIUM */
+.msg-ai {
+  background: linear-gradient(180deg, rgba(245,255,255,0.36), rgba(220,250,255,0.30));
+  color: #03161b;
+  border: 1px solid var(--glass-strong);
+  box-shadow: 0 8px 28px rgba(0,110,180,0.06),
+              inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+.msg-ai::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  box-shadow: 0 0 28px rgba(120,200,255,0.06);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Small frost texture overlay (subtle) */
+.msg-ai::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  right: -6px;
+  bottom: -6px;
+  background: radial-gradient(400px 120px at 8% 12%, rgba(255,255,255,0.02), transparent 6%),
+              linear-gradient(180deg, rgba(255,255,255,0.01), transparent 30%);
+  border-radius: 14px;
+  pointer-events: none;
+  opacity: 0.98;
+}
+
+/* USER bubble: dark dense */
+.msg-user {
+  margin-left: auto;
+  background: linear-gradient(180deg, rgba(10,14,20,0.86), rgba(6,10,16,0.9));
+  color: var(--ice-100);
+  border: 1px solid rgba(255,255,255,0.02);
+  box-shadow: 0 10px 30px rgba(0,30,60,0.55);
+}
+
+/* Micro timestamp - для наших msg-meta */
+.msg-meta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Input bar - для наших input-bar */
+.input-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+.input-bar input[type="text"] {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  color: #dff7ff;
+  border: 1px solid rgba(255,255,255,0.02);
+  outline: none;
+}
+
+/* Send button - для наших btn-send */
+.btn-send {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accentA), var(--accentB));
+  color: #021427;
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0,165,255,0.14);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-send:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(0,165,255,0.22);
+}
+
+/* Badges - для наших бейджей */
+.badge {
+  background: rgba(170,230,255,0.07);
+  border: 1px solid rgba(200,240,255,0.06);
+  color: var(--ice-80);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Typing indicator - для нашего typing */
+.typing {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.typing .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #bff2ff, #8fd6ff);
+  opacity: 0.2;
+  animation: float 1s infinite ease-in-out;
+}
+
+.typing .dot:nth-child(2) { animation-delay: 0.16s; }
+.typing .dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes float {
+  0% { transform: translateY(0); opacity: 0.2; }
+  50% { transform: translateY(-6px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.2; }
+}
+
+/* Subtle entrance for bubbles */
+.msg-bubble {
+  transform-origin: left bottom;
+  animation: bubbleIn 260ms cubic-bezier(.2,.9,.3,1);
+}
+
+@keyframes bubbleIn {
+  0% { transform: translateY(8px) scale(0.995); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .strateg-body { grid-template-columns: 1fr; }
+  .avatar { width: 38px; height: 38px; }
+  .strateg-russia-card { height: 92vh; }
+}
+
+@import './mobile-styles.css';
+
+
+/* ===========================
+   STRATEG-RUSSIA NEXT GEN STYLES
+   =========================== */
+
+/* STRATEG-RUSSIA NEXT GEN — ICE GLASS PREMIUM
+   Dark Quant background + Ice Glass message bubbles
+   Fonts recommended: Inter for UI, JetBrains Mono for monospace if needed
+*/
+
+/* Root page container — should be applied to the page or main wrapper */
+.strateg-russia-next-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(6,18,32,0.55), transparent 6%),
+              radial-gradient(900px 500px at 95% 85%, rgba(0,45,80,0.18), transparent 8%),
+              linear-gradient(180deg,#041021 0%, #060914 100%);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #e7f9ff;
+}
+
+/* Main dialog card */
+.strateg-russia-card {
+  width: min(1180px, 96%);
+  max-width: 1280px;
+  height: min(720px, 82vh);
+  border-radius: 18px;
+  padding: 18px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(10,16,28,0.72), rgba(8,12,20,0.62));
+  border: 1px solid rgba(180,230,255,0.04);
+  box-shadow:
+    0 8px 30px rgba(2,10,20,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Top navigation / ribbons */
+.strateg-russia-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:8px 12px;
+  margin-bottom:8px;
+}
+.strateg-russia-top .ribbons { display:flex; gap:10px; align-items:center; }
+.ribbon {
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  background: linear-gradient(180deg, rgba(10,18,28,0.36), rgba(255,255,255,0.02));
+  border: 1px solid rgba(180,230,255,0.04);
+  color:#bfeaff;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+}
+
+/* Header with title + small badges */
+.strateg-russia-header {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.strateg-russia-title {
+  font-weight:700;
+  font-size:20px;
+  color: #dff7ff;
+  letter-spacing: 0.4px;
+}
+.strateg-russia-badges { display:flex; gap:8px; align-items:center; margin-left:8px; }
+.badge {
+  background: rgba(170,230,255,0.07);
+  border: 1px solid rgba(200,240,255,0.06);
+  color: #c7f0ff;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+
+/* chat area layout */
+.strateg-body {
+  display:grid;
+  grid-template-columns: 1fr 360px;
+  gap:16px;
+  flex:1;
+  min-height:0;
+}
+
+/* Left: messages panel */
+.strateg-chat {
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent 40%);
+  border-radius: 14px;
+  padding: 18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-height:0;
+  overflow:hidden;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* messages list scroll area */
+.messages {
+  flex:1;
+  overflow:auto;
+  padding-right:8px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  scroll-behavior:smooth;
+}
+
+/* custom scrollbar thin & frosty */
+.messages::-webkit-scrollbar { width:8px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(160,220,255,0.12), rgba(120,200,255,0.06));
+  border-radius:8px;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* Bubble base styles */
+.msg-row { display:flex; align-items:flex-end; gap:10px; max-width:100%; }
+.msg-bubble {
+  position: relative;
+  padding: 12px 16px;
+  border-radius: 14px;
+  line-height:1.35;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.02);
+  max-width: 78%;
+  word-break: break-word;
+  transition: transform 160ms cubic-bezier(.2,.9,.3,1), box-shadow 160ms;
+}
+
+/* ICE GLASS PREMIUM  AI bubble (left side) */
+.msg-ai {
+  align-self:flex-start;
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(220,245,255,0.34), rgba(200,235,255,0.30));
+  border: 1px solid rgba(200,240,255,0.28);
+  box-shadow:
+    0 6px 18px rgba(40,150,240,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.32);
+  /* subtle frosted texture with overlay */
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+    radial-gradient(800px 200px at 10% 10%, rgba(255,255,255,0.02), transparent 6%);
+}
+
+/* inner glow / shine */
+.msg-ai::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow: 0 0 30px rgba(130,210,255,0.07);
+  mix-blend-mode: screen;
+}
+
+/* USER bubble (right side)  dark and dense */
+.msg-user {
+  margin-left:auto;
+  align-self:flex-end;
+  color: #ffffff;
+  background: linear-gradient(180deg, rgba(7,12,20,0.84), rgba(10,16,28,0.9));
+  border: 1px solid rgba(90,130,180,0.06);
+  box-shadow:
+    0 6px 26px rgba(0,40,80,0.55),
+    inset 0 -1px 0 rgba(255,255,255,0.02);
+}
+
+/* small timestamp under bubble */
+.msg-meta {
+  font-size:11px;
+  color: rgba(200,230,255,0.54);
+  margin-top:8px;
+  text-align:right;
+}
+
+/* avatar circles (pure CSS spheres) */
+.avatar {
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  flex: 0 0 42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:visible;
+}
+
+/* AI avatar  icy sphere */
+.avatar-ai {
+  background: radial-gradient(circle at 30% 25%, #f4ffff, #bfeeff 30%, #8fcfff 60%, rgba(120,190,255,0.14) 100%);
+  border: 1px solid rgba(220,250,255,0.5);
+  box-shadow: 0 6px 18px rgba(100,210,255,0.08), inset 0 -6px 18px rgba(255,255,255,0.12);
+}
+
+/* user avatar  dark graphite sphere */
+.avatar-user {
+  background: radial-gradient(circle at 30% 30%, #1b2430 0%, #0c1420 60%, rgba(8,12,16,1) 100%);
+  border: 1px solid rgba(255,255,255,0.02);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6), inset 0 2px 8px rgba(255,255,255,0.02);
+}
+
+/* subtle icon or initials (small) inside avatars */
+.avatar .initials {
+  font-size:12px;
+  font-weight:700;
+  color: #ffffff;
+}
+
+/* Input bar  frosted capsule */
+.input-bar {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:12px;
+  border-radius:12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* input field */
+.input-bar input[type="text"] {
+  flex:1;
+  padding:12px 14px;
+  background: rgba(255,255,255,0.02);
+  color: #dff7ff;
+  border-radius:10px;
+  border: 1px solid rgba(255,255,255,0.02);
+  outline:none;
+}
+
+/* send button  neon icy */
+.btn-send {
+  padding:10px 14px;
+  border-radius:10px;
+  background: linear-gradient(135deg,#00a5ff,#6bd2ff);
+  color: #021428;
+  font-weight:800;
+  border:none;
+  box-shadow: 0 8px 30px rgba(50,180,255,0.14);
+  cursor:pointer;
+}
+
+/* Typing indicator style (small) */
+.typing {
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.typing .dot {
+  width:8px; height:8px; border-radius:50%;
+  background: linear-gradient(180deg,#bff0ff,#8fd6ff);
+  opacity:0.28;
+  animation: dotPulse 1s infinite ease-in-out;
+}
+.typing .dot:nth-child(2){ animation-delay:0.18s; }
+.typing .dot:nth-child(3){ animation-delay:0.36s; }
+
+@keyframes dotPulse {
+  0% { transform: translateY(0); opacity:0.22; }
+  50% { transform: translateY(-6px); opacity:1; }
+  100% { transform: translateY(0); opacity:0.22; }
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .strateg-body { grid-template-columns: 1fr; }
+  .strateg-russia-card { height: 90vh; }
+  .avatar { width:36px; height:36px; }
+  .btn-send { padding:8px 12px; }
+}
+
+/* STAGE8: E2EE encrypted message indicator */
+.message-encrypted {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.6;
+}
+

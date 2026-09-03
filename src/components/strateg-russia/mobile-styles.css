@@ -1,0 +1,105 @@
+﻿/* ===========================
+   СТРАТЕГ MOBILE ADAPTIVE
+   for iPhone & Android
+   =========================== */
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .strateg-russia-container {
+    border-radius: 0;
+    padding: 15px;
+    height: 100vh;
+    box-shadow: none;
+    border: none;
+  }
+
+  .chat-header {
+    padding: 12px 0;
+    margin-bottom: 10px;
+  }
+
+  .chat-header h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Скрываем бейджи на мобильных */
+  .creator-badge,
+  .friend-badge {
+    display: none;
+  }
+
+  /* Сообщения на всю ширину */
+  .ai-message,
+  .user-message {
+    max-width: 90%;
+    padding: 10px 14px;
+    margin: 8px 0;
+  }
+
+  /* Уменьшаем шрифт времени */
+  .message-time {
+    font-size: 10px;
+  }
+
+  /* Адаптивный инпут */
+  .chat-input-container {
+    padding: 15px;
+  }
+
+  .input-wrapper {
+    gap: 8px;
+  }
+
+  .chat-input {
+    padding: 14px 16px;
+    font-size: 16px; /* Убираем zoom на iOS */
+  }
+
+  .send-button {
+    padding: 14px 18px;
+    min-width: 50px;
+  }
+}
+
+/* Особенности для очень маленьких экранов */
+@media (max-width: 480px) {
+  .strateg-russia-container {
+    padding: 10px;
+  }
+
+  .chat-header h3 {
+    font-size: 1rem;
+  }
+
+  .ai-message,
+  .user-message {
+    max-width: 95%;
+    padding: 8px 12px;
+  }
+
+  .messages-container {
+    padding-right: 2px;
+  }
+}
+
+/* Портретный режим */
+@media (max-width: 768px) and (orientation: portrait) {
+  .strateg-russia-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ландшафтный режим */
+@media (max-width: 768px) and (orientation: landscape) {
+  .strateg-russia-container {
+    height: 100vh;
+  }
+  
+  .chat-header {
+    padding: 8px 0;
+  }
+  
+  .messages-container {
+    max-height: 60vh;
+  }
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATEG-RUSSIA Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a1929;
+            color: #e7f9ff;
+            font-family: monospace;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #00e5ff;
+            border-radius: 8px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected { background: rgba(0, 229, 255, 0.1); }
+        .disconnected { background: rgba(255, 0, 0, 0.1); }
+        input, button {
+            padding: 8px 12px;
+            margin: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #00e5ff;
+            border-radius: 4px;
+            color: #e7f9ff;
+        }
+        button:hover { background: rgba(0, 229, 255, 0.2); }
+        .messages {
+            height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>STRATEG-RUSSIA Core Test</h1>
+
+    <div class="test-section">
+        <h2>Connection Status</h2>
+        <div id="status" class="status disconnected">Not connected</div>
+        <div>СТРАТЕГ-ID: <span id="zimaId">Generating...</span></div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Messages</h2>
+        <div id="messages" class="messages"></div>
+        <input type="text" id="targetId" placeholder="Target СТРАТЕГ-ID" />
+        <input type="text" id="messageText" placeholder="Message text" />
+        <button onclick="sendMessage()">Send Message</button>
+    </div>
+
+    <script type="module">
+        // Simple test of the core
+        let ws = null;
+        let zimaId = null;
+
+        function updateStatus(text, connected = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = text;
+            statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
+        }
+
+        function updateZimaId(id) {
+            zimaId = id;
+            document.getElementById('zimaId').textContent = id;
+        }
+
+        function addMessage(text, isUser = false) {
+            const messagesEl = document.getElementById('messages');
+            const msgEl = document.createElement('div');
+            msgEl.textContent = (isUser ? 'You: ' : 'Them: ') + text;
+            msgEl.style.color = isUser ? '#00e5ff' : '#e7f9ff';
+            messagesEl.appendChild(msgEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        window.connect = function() {
+            if (ws?.readyState === WebSocket.OPEN) return;
+
+            updateStatus('Connecting...');
+
+            ws = new WebSocket('ws://localhost:8080');
+
+            ws.onopen = () => {
+                updateStatus('Connected', true);
+
+                // Generate and register СТРАТЕГ-ID
+                const newId = 'СТРАТЕГ-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                updateZimaId(newId);
+
+                ws.send(JSON.stringify({
+                    type: 'REGISTER',
+                    zimaId: newId
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'REGISTERED') {
+                        console.log('Registered as:', data.zimaId);
+                    } else if (data.type === 'MESSAGE') {
+                        const text = atob(data.payload);
+                        addMessage(text, false);
+                    } else if (data.type === 'SENT') {
+                        console.log('Message sent');
+                    }
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
+
+            ws.onclose = () => {
+                updateStatus('Disconnected');
+            };
+
+            ws.onerror = (error) => {
+                updateStatus('Connection error');
+                console.error('WebSocket error:', error);
+            };
+        };
+
+        window.disconnect = function() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        };
+
+        window.sendMessage = function() {
+            const targetId = document.getElementById('targetId').value.trim();
+            const text = document.getElementById('messageText').value.trim();
+
+            if (!targetId || !text || !ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected or missing data');
+                return;
+            }
+
+            addMessage(text, true);
+
+            ws.send(JSON.stringify({
+                type: 'SEND',
+                to: targetId,
+                payload: btoa(text)
+            }));
+
+            document.getElementById('messageText').value = '';
+        };
+    </script>
+</body>
+</html>
+

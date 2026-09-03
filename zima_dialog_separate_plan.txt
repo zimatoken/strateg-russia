@@ -1,0 +1,26 @@
+﻿STRATEG-RUSSIA FRONTEND (ОТДЕЛЬНЫЙ ПРОЕКТ)
+
+ РАСПОЛОЖЕНИЕ: D:\strateg-russia-frontend\
+
+ СТЕК ТЕХНОЛОГИЙ:
+- React + TypeScript + Vite
+- WebSocket клиент
+- Axios для REST API
+- Styled Components или CSS Modules
+
+ ПОДКЛЮЧЕНИЕ К БЭКЕНДУ:
+- Бэкенд: https://github.com/zimatoken/strateg-russia
+- API: http://localhost:3000/v0
+- WebSocket: ws://localhost:3000
+
+ СТРУКТУРА ПРОЕКТА:
+strateg-russia-frontend/
+ src/
+    components/
+       (все наши готовые компоненты)
+    pages/
+       ChatPage.tsx
+    services/
+       api.ts
+    App.tsx
+ package.json
