@@ -7,16 +7,19 @@ import CoursePage from './pages/CoursePage';
 import PlanPage from './pages/PlanPage';
 import BarterPage from './pages/BarterPage';
 import DealsPage from './pages/DealsPage';
+import Dashboard from './pages/Dashboard';
 import { getDialogCore } from './core/dialogCore';
 import {
   clearDeepLinkUrl,
   isValidStrategId,
   resolveIncomingDeepLink,
 } from './core/deepLink';
+import { useTheme } from './hooks/useTheme';
 
 const logger = pino({ name: 'strateg-app' });
 
 function App() {
+  const { isDark, toggleTheme } = useTheme();
   const [path, setPath] = useState(() => window.location.pathname);
   const [connectionState, setConnectionState] = useState(() => getDialogCore().getConnectionState());
   const [deepLinkTargetId] = useState<string | null>(() => {
@@ -54,6 +57,7 @@ function App() {
 
   const activeModule = getEnabledModules().find((module) => module.path === path);
   const renderContent = () => {
+    if (path === '/dashboard') return <Dashboard />;
     if (path === '/modules/course') return <CoursePage />;
     if (path === '/modules/plan') return <PlanPage />;
     if (path === '/modules/barter') return <BarterPage />;
@@ -76,7 +80,7 @@ function App() {
 
   return (
     <div className="strateg-app">
-      <header className="strateg-header"><button className="strateg-brand" onClick={() => navigate('/')}><span className="strateg-brand-mark">S</span><span><strong>СТРАТЕГ</strong><small>для бизнеса в России</small></span></button><div className="strateg-header-actions"><span className="strateg-user-id">ID: {connectionState.currentStrategId ?? 'создаётся...'}</span><button className="strateg-profile-btn" onClick={() => navigate('/chat')} aria-label="Открыть диалог">◉</button></div></header>
+      <header className="strateg-header"><button className="strateg-brand" onClick={() => navigate('/')}><span className="strateg-brand-mark">S</span><span><strong>СТРАТЕГ</strong><small>для бизнеса в России</small></span></button><div className="strateg-header-actions"><button onClick={toggleTheme} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '18px' }} aria-label="Переключить тему">{isDark ? '☀️' : '🌙'}</button><span className="strateg-user-id">ID: {connectionState.currentStrategId ?? 'создаётся...'}</span><button className="strateg-profile-btn" onClick={() => navigate('/chat')} aria-label="Открыть диалог">◉</button></div></header>
       <div className="strateg-shell"><BusinessNav activeModule={activeModule} onModuleSelect={(module: BusinessModule) => navigate(module.path)} /><main className="strateg-content">{renderContent()}</main></div>
       <footer className="strateg-footer"><span>СТРАТЕГ ДЛЯ БИЗНЕСА В РОССИИ</span><span>v1.0 · защищённое пространство</span></footer>
     </div>

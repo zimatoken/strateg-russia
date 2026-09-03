@@ -96,3 +96,29 @@ export function generateBusinessPlanSummary(plan: BusinessPlan): string {
 KPI: ${plan.kpis.length} показателей
   `.trim();
 }
+
+export interface DashboardMetrics {
+  revenue: number;
+  expenses: number;
+  profit: number;
+}
+
+export function getDashboardMetrics(): DashboardMetrics {
+  try {
+    const savedData = localStorage.getItem('strateg-plan-data');
+    if (savedData) {
+      const plan = JSON.parse(savedData) as BusinessPlan;
+      const revenue = plan.revenue.reduce((sum, r) => sum + r.amount, 0);
+      const expenses = plan.expenses.reduce((sum, e) => sum + e.amount, 0);
+      return {
+        revenue,
+        expenses,
+        profit: revenue - expenses,
+      };
+    }
+  } catch (error) {
+    console.error('Error loading plan data:', error);
+  }
+  
+  return { revenue: 0, expenses: 0, profit: 0 };
+}
