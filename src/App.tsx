@@ -18,6 +18,7 @@ import {
 } from './core/deepLink';
 import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './context/LanguageContext';
+import SyncStatus from './components/SyncStatus';
 
 const logger = pino({ name: 'strateg-app' });
 
@@ -86,7 +87,16 @@ function App() {
 
   return (
     <div className="strateg-app">
-      <header className="strateg-header"><button className="strateg-brand" onClick={() => navigate('/')}><span className="strateg-brand-mark">S</span><span><strong>{t('app_title')}</strong><small>{t('app_subtitle')}</small></span></button><div className="strateg-header-actions"><button onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: '700', marginRight: '8px' }}>{lang === 'ru' ? 'RU' : 'EN'}</button><button onClick={toggleTheme} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '18px' }} aria-label={t('theme_toggle')}>{isDark ? '☀️' : '🌙'}</button><span className="strateg-user-id">{t('id_label')} {connectionState.currentStrategId ?? t('status_creating')}</span><button className="strateg-profile-btn" onClick={() => navigate('/chat')} aria-label="Открыть диалог">◉</button></div></header>
+      <header className="strateg-header">
+        <button className="strateg-brand" onClick={() => navigate('/')}><span className="strateg-brand-mark">S</span><span><strong>{t('app_title')}</strong><small>{t('app_subtitle')}</small></span></button>
+        <div className="strateg-header-actions">
+          <button onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: '700', marginRight: '8px' }}>{lang === 'ru' ? 'RU' : 'EN'}</button>
+          <button onClick={toggleTheme} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '18px' }} aria-label={t('theme_toggle')}>{isDark ? '☀️' : '🌙'}</button>
+          <SyncStatus />
+          <span className="strateg-user-id">{t('id_label')} {connectionState.currentStrategId ?? t('status_creating')}</span>
+          <button className="strateg-profile-btn" onClick={() => navigate('/chat')} aria-label="Открыть диалог">◉</button>
+        </div>
+      </header>
       <div className="strateg-shell"><BusinessNav activeModule={activeModule} onModuleSelect={(module: BusinessModule) => navigate(module.path)} /><main className="strateg-content">{renderContent()}</main></div>
       <footer className="strateg-footer"><span>{t('footer_title')}</span><span>{t('footer_version')}</span></footer>
     </div>

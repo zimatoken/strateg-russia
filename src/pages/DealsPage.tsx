@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ContextChat } from '../components/ContextChat';
-import { getUnreadCountByContext } from '../core/db';
+import useDataStore from '../hooks/useDataStore';
 
 export default function DealsPage() {
   const { t } = useLanguage();
   const [chatContext, setChatContext] = useState<{ type: 'deal' | 'barter' | 'project'; id: string; title: string } | null>(null);
   // Пример списка сделок — заменить реальными данными
-  const [deals] = useState(() => [
-    { id: 'deal-1', title: 'Переговоры с Партнёром А', description: 'Условия поставки и оплаты' },
-    { id: 'deal-2', title: 'Сделка с Клиентом Б', description: 'Долгосрочное сотрудничество' }
-  ]);
+  const data = useDataStore();
+  const deals = data.deals || [];
 
   const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
 
@@ -20,7 +18,7 @@ export default function DealsPage() {
       const map: Record<string, number> = {};
       for (const d of deals) {
         try {
-          const count = await getUnreadCountByContext('deal', d.id);
+          const count = await (await import('../core/db')).getUnreadCountByContext('deal', d.id);
           if (mounted) map[d.id] = count;
         } catch {
           if (mounted) map[d.id] = 0;

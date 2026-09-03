@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ContextChat } from '../components/ContextChat';
-import { getUnreadCountByContext } from '../core/db';
+import useDataStore from '../hooks/useDataStore';
 
 export default function BarterPage() {
   const { t } = useLanguage();
   const [chatContext, setChatContext] = useState<{ type: 'deal' | 'barter' | 'project'; id: string; title: string } | null>(null);
 
-  const [offers] = useState(() => [
-    { id: 'barter-1', title: 'Обмен консалтинга на маркетинг', description: 'Предлагаю 10 часов консалтинга в обмен на продвижение' },
-    { id: 'barter-2', title: 'Бартер оборудование ↔ услуги', description: 'Обсуждение поставки и настройки' }
-  ]);
+  const data = useDataStore();
+  const offers = data.barters || [];
 
   const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
 
@@ -20,7 +18,7 @@ export default function BarterPage() {
       const map: Record<string, number> = {};
       for (const o of offers) {
         try {
-          const count = await getUnreadCountByContext('barter', o.id);
+          const count = await (await import('../core/db')).getUnreadCountByContext('barter', o.id);
           if (mounted) map[o.id] = count;
         } catch {
           if (mounted) map[o.id] = 0;
