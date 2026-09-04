@@ -12,6 +12,8 @@ interface BusinessNavProps {
 export default function BusinessNav({ onModuleSelect, onAuditSelect, isMobileOpen = false, onClose, activeModule }: BusinessNavProps) {
   const { t } = useLanguage();
   const modules = getEnabledModules();
+  // ensure unique modules by id to avoid duplicate render
+  const uniqModules = Array.from(new Map(modules.map(m => [m.id, m])).values());
 
   const categoryNames: Record<string, string> = {
     diagnostics: t('diagnostics_category'),
@@ -31,7 +33,7 @@ export default function BusinessNav({ onModuleSelect, onAuditSelect, isMobileOpe
       </div>
       {isMobileOpen && <button type="button" className="strateg-mobile-nav-close" onClick={onClose} aria-label={t('mobile_close')}>×</button>}
       <div className="strateg-nav-list">
-        {modules.map((module) => (
+        {uniqModules.map((module) => (
           <button className={`strateg-nav-item ${activeModule?.id === module.id ? 'active' : ''}`} key={module.id} onClick={() => { onModuleSelect(module); onClose?.(); }}>
             <span className="strateg-nav-icon">{module.icon}</span>
             <span><strong>{module.title}</strong><small>{categoryNames[module.category]}</small></span>

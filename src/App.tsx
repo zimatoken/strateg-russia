@@ -92,7 +92,19 @@ function App() {
         </div>
         <div className="strateg-dashboard-meta"><span><i className="strateg-status-dot" /> P2P {connectionState.connectionStatus === 'connected' ? t('status_connected') : t('status_connecting')}</span><strong>{t('id_label')} {connectionState.currentStrategId ?? t('status_creating')}</strong></div>
         <div className="strateg-dashboard-grid">
-          {getEnabledModules().map((module) => <button className="strateg-dashboard-card" key={module.id} onClick={() => navigate(module.path)}><span className="strateg-card-icon">{module.icon}</span><span className="strateg-card-category">{module.category === 'diagnostics' ? t('diagnostics_category') : module.category === 'planning' ? t('planning_category') : module.category === 'exchange' ? t('exchange_category') : module.category === 'communication' ? t('messenger_title') : t('negotiations_category')}</span><h2>{module.title}</h2><p>{module.description}</p><span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span></button>)}
+          {(() => {
+            // guard: remove possible duplicate modules by id
+            const uniq = Array.from(new Map(getEnabledModules().map(m => [m.id, m])).values());
+            return uniq.map((module) => (
+              <button className="strateg-dashboard-card" key={module.id} onClick={() => navigate(module.path)}>
+                <span className="strateg-card-icon">{module.icon}</span>
+                <span className="strateg-card-category">{module.category === 'diagnostics' ? t('diagnostics_category') : module.category === 'planning' ? t('planning_category') : module.category === 'exchange' ? t('exchange_category') : module.category === 'communication' ? t('messenger_title') : t('negotiations_category')}</span>
+                <h2>{module.title}</h2>
+                <p>{module.description}</p>
+                <span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span>
+              </button>
+            ));
+          })()}
           <button className="strateg-dashboard-card strateg-chat-card" onClick={() => navigate('/chat')}><span className="strateg-card-icon">💬</span><span className="strateg-card-category">{t('dashboard_chat_card_category')}</span><h2>{t('dashboard_chat_card_title')}</h2><p>{t('dashboard_chat_card_description')}</p><span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span></button>
         </div>
       </section>

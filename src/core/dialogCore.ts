@@ -465,6 +465,8 @@ export class StrategDialogCore implements DialogCore {
     action: 'create' | 'join' | 'leave';
     userId?: string;
   }) => void)[] = [];
+  // QR / P2P signal callbacks
+  private qrSignalCallbacks: ((sdp: string) => void)[] = [];
 
   constructor() {
     this.identity = new IdentityManager();
@@ -474,7 +476,12 @@ export class StrategDialogCore implements DialogCore {
       if (savedId && /^STRATEG-[A-Z0-9]{9}$/.test(savedId)) {
         this.connectionState.currentStrategId = savedId;
       } else {
-        this.connectionState.currentStrategId = this.generateStrategId();
+        // use identity-managed user id when available
+        try {
+          this.connectionState.currentStrategId = this.identity.getUserId();
+        } catch {
+          this.connectionState.currentStrategId = this.generateStrategId();
+        }
         localStorage.setItem('strateg-id', this.connectionState.currentStrategId);
       }
       
@@ -550,6 +557,11 @@ export class StrategDialogCore implements DialogCore {
     try {
       // Создаём P2P транспорт
       this.transport = new P2PTransport(this.identity.getDeviceId());
+
+      // relay QR signals from transport to UI listeners
+      this.transport.onQRGenerated((sdp) => {
+        this.qrSignalCallbacks.forEach(cb => cb(sdp));
+      });
 
       // Настраиваем callbacks
       this.transport.onMessage(async (data) => {
@@ -1810,6 +1822,23 @@ export class StrategDialogCore implements DialogCore {
       const index = this.groupUpdateCallbacks.indexOf(callback);
       if (index > -1) this.groupUpdateCallbacks.splice(index, 1);
     };
+  }
+
+  onQRSignal(callback: (sdp: string) => void): () => void {
+    this.qrSignalCallbacks.push(callback);
+    return () => {
+      const idx = this.qrSignalCallbacks.indexOf(callback);
+      if (idx > -1) this.qrSignalCallbacks.splice(idx, 1);
+    };
+  }
+
+  async acceptRemoteSignal(sdpData: string): Promise<void> {
+    if (!this.transport) throw new Error('Transport not initialized');
+    if (typeof (this.transport as any).setRemoteSDP === 'function') {
+      await (this.transport as any).setRemoteSDP(sdpData);
+    } else {
+      throw new Error('Transport does not support remote SDP');
+    }
   }
 }
 

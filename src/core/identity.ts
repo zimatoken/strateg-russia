@@ -32,6 +32,40 @@ export class IdentityManager {
     return this.userName ? `${this.userName} (${this.deviceId})` : this.deviceId;
   }
 
+  // Возвращает уникальный идентификатор пользователя (сохраняется в localStorage)
+  getUserId(): string {
+    const key = 'strateg_user_id';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        id = `STRATEG-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+      } else {
+        id = `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
+      }
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+
+
+// Утилита для быстрого доступа без инстанса
+export function getUserId(): string {
+  try {
+    const key = 'strateg_user_id';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        id = `STRATEG-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+      } else {
+        id = `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
+      }
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch (err) {
+    return `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
+  }
+}
   // Рейтинг и сделки (для будущих модулей)
   getRating(): number {
     return parseInt(localStorage.getItem('strateg_rating') || '0', 10);
