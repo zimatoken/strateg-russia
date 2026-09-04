@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { COURSE_QUIZZES, calculateQuizResult } from '../modules/course';
 import { useLanguage } from '../context/LanguageContext';
+import BookSuggestion from '../components/BookSuggestion';
+import SolutionSteps from '../components/SolutionSteps';
+import AIRecommendations from '../components/AIRecommendations';
+import { AIRecommendation, AI_RECOMMENDATIONS_KEY, generateRecommendations } from '../core/aiRecommendations';
 
 export default function CoursePage() {
   const { t } = useLanguage();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResult, setShowResult] = useState(false);
+  const [recommendations, setRecommendations] = useState<AIRecommendation[]>(() => {
+    try {
+      const saved = localStorage.getItem(AI_RECOMMENDATIONS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const questions = Object.values(COURSE_QUIZZES).flat();
   const result = calculateQuizResult('strategy', answers);
 
@@ -34,8 +46,16 @@ export default function CoursePage() {
           </article>
         ))}
       </div>
-      <button className="strateg-primary-btn" onClick={() => setShowResult(true)}>{t('course_get_diagnostic')}</button>
+      <button className="strateg-primary-btn" onClick={() => {
+        const generated = generateRecommendations(answers);
+        setRecommendations(generated);
+        localStorage.setItem(AI_RECOMMENDATIONS_KEY, JSON.stringify(generated));
+        setShowResult(true);
+      }}>{t('course_get_diagnostic')}</button>
       {showResult && <div className="strateg-result"><strong>{Math.round(result.percentage)}%</strong><span>{t('course_strategic_readiness')}</span></div>}
+      {showResult && <AIRecommendations recommendations={recommendations} />}
+      <BookSuggestion moduleId="course" />
+      <SolutionSteps moduleId="course" />
     </section>
   );
 }

@@ -7,6 +7,9 @@ export interface Deal {
   description?: string;
   createdAt: number;
   updatedAt?: number;
+  partner?: string;
+  value?: number;
+  stage?: 'lead' | 'qualification' | 'proposal' | 'negotiation' | 'closed';
 }
 
 export interface Barter {
@@ -15,15 +18,22 @@ export interface Barter {
   description?: string;
   createdAt: number;
   updatedAt?: number;
+  category?: string;
+  offer?: string;
+  demand?: string;
 }
 
 export interface Plan { id: string; title: string; createdAt: number; updatedAt?: number }
+export interface PlanResource { id: string; name: string; value: number }
+export interface PlanStep { id: string; title: string; deadline: string; responsible: string; completed: boolean }
+export interface PlanData { goal: string; resources: PlanResource[]; steps: PlanStep[] }
 export interface Contact { id: string; name: string; createdAt: number; updatedAt?: number }
 
 export interface AppData {
   deals: Deal[];
   barters: Barter[];
   plans: Plan[];
+  plan: PlanData;
   contacts: Contact[];
   version?: number;
 }
@@ -51,11 +61,14 @@ class DataStoreClass {
   private load(): AppData {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as AppData;
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<AppData>;
+        return { ...parsed, deals: parsed.deals || [], barters: parsed.barters || [], plans: parsed.plans || [], contacts: parsed.contacts || [], plan: parsed.plan || { goal: '', resources: [], steps: [] } } as AppData;
+      }
     } catch (e) {
       console.warn('Failed to parse DataStore from localStorage', e);
     }
-    return { deals: [], barters: [], plans: [], contacts: [], version: Date.now() };
+    return { deals: [], barters: [], plans: [], contacts: [], plan: { goal: '', resources: [], steps: [] }, version: Date.now() };
   }
 
   private save() {
@@ -180,6 +193,32 @@ class DataStoreClass {
   }
   updatePlan(id: string, updates: Partial<Plan>) { const p = this.getPlan(id); if (!p) throw new Error('Not found'); Object.assign(p, updates); p['updatedAt'] = Date.now(); this.recordChange({ id, type: 'plan', action: 'update', timestamp: Date.now(), payload: p }); this.save(); this.sync(); return p; }
   deletePlan(id: string) { this.data.plans = this.data.plans.filter(p => p.id !== id); this.recordChange({ id, type: 'plan', action: 'delete', timestamp: Date.now() }); this.save(); this.sync(); }
+
+  updatePlanGoal(goal: string): void {
+    this.data.plan.goal = goal.trim();
+    this.save();
+    this.sync();
+  }
+
+  addPlanResource(resource: { name: string; value: number }): void {
+    this.data.plan.resources.push({ id: crypto.randomUUID(), name: resource.name.trim(), value: resource.value });
+    this.save();
+    this.sync();
+  }
+
+  addPlanStep(step: { title: string; deadline: string; responsible: string }): void {
+    this.data.plan.steps.push({ id: crypto.randomUUID(), title: step.title.trim(), deadline: step.deadline, responsible: step.responsible.trim(), completed: false });
+    this.save();
+    this.sync();
+  }
+
+  togglePlanStep(id: string): void {
+    const step = this.data.plan.steps.find((item) => item.id === id);
+    if (!step) return;
+    step.completed = !step.completed;
+    this.save();
+    this.sync();
+  }
 
   // Contacts
   getContacts(): Contact[] { return this.data.contacts; }

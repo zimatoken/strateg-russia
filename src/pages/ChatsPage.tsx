@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { ContextChat } from '../components/ContextChat';
+import { MessengerContextChat as ContextChat } from '../modules/messenger/MessengerContextChat';
 import { getDialogCore } from '../core/dialogCore';
 
 export default function ChatsPage() {

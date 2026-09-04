@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { ContextChat } from '../components/ContextChat';
+import { MessengerContextChat as ContextChat } from '../modules/messenger/MessengerContextChat';
 import useDataStore from '../hooks/useDataStore';
 import { onBroadcast } from '../core/broadcast';
+import BookSuggestion from '../components/BookSuggestion';
+import SolutionSteps from '../components/SolutionSteps';
+import DealModal from '../components/DealModal';
+import { dataStore, Deal } from '../core/dataStore';
 
 export default function DealsPage() {
   const { t } = useLanguage();
   const [chatContext, setChatContext] = useState<{ type: 'deal' | 'barter' | 'project'; id: string; title: string } | null>(null);
+  const [modalDeal, setModalDeal] = useState<Deal | null | undefined>(undefined);
   // Пример списка сделок — заменить реальными данными
   const data = useDataStore();
   const deals = data.deals || [];
@@ -46,28 +51,32 @@ export default function DealsPage() {
           <p>{t('deals_heading_description')}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="strateg-primary-btn">{t('deals_new')}</button>
+          <button className="strateg-primary-btn" onClick={() => setModalDeal(null)}>{t('deals_new')}</button>
         </div>
       </div>
 
       <div className="strateg-deal-columns">
         <div>
           <h2>{t('deals_in_progress')}</h2>
-          {deals.length === 0 ? (
+          {deals.filter((deal) => deal.stage !== 'closed').length === 0 ? (
             <div className="strateg-empty-module compact">
               <span>◌</span>
               <p>{t('deals_no_active')}</p>
             </div>
           ) : (
             <div className="strateg-card-list">
-              {deals.map((deal) => (
+              {deals.filter((deal) => deal.stage !== 'closed').map((deal) => (
                 <div key={deal.id} className="strateg-deal-card">
                   <div className="strateg-deal-card-main">
                     <h3>{deal.title}</h3>
+                    {deal.partner && <p><strong>{t('deal_partner')}:</strong> {deal.partner}</p>}
+                    {deal.value !== undefined && <p><strong>{t('deal_value')}:</strong> {deal.value.toLocaleString('ru-RU')} ₽</p>}
                     <p>{deal.description}</p>
                   </div>
                   <div className="strateg-deal-card-actions">
                     <button className="strateg-icon-btn" title={t('chat_open_deal')} onClick={() => setChatContext({ type: 'deal', id: deal.id, title: deal.title })}>💬</button>
+                    <button className="strateg-icon-btn" title={t('deal_edit')} onClick={() => setModalDeal(deal)}>✎</button>
+                    <button className="strateg-icon-btn" title={t('deal_delete')} onClick={() => dataStore.deleteDeal(deal.id)}>🗑</button>
                     {unreadMap[deal.id] > 0 && <span className="strateg-badge">{unreadMap[deal.id]}</span>}
                   </div>
                 </div>
@@ -77,12 +86,13 @@ export default function DealsPage() {
         </div>
         <div>
           <h2>{t('deals_completed')}</h2>
-          <div className="strateg-empty-module compact">
-            <span>✓</span>
-            <p>{t('deals_no_history')}</p>
-          </div>
+          {deals.filter((deal) => deal.stage === 'closed').length === 0 ? <div className="strateg-empty-module compact"><span>✓</span><p>{t('deals_no_history')}</p></div> : <div className="strateg-card-list">{deals.filter((deal) => deal.stage === 'closed').map((deal) => <div key={deal.id} className="strateg-deal-card"><div className="strateg-deal-card-main"><h3>{deal.title}</h3><p>{deal.partner}</p></div><div className="strateg-deal-card-actions"><button className="strateg-icon-btn" title={t('deal_edit')} onClick={() => setModalDeal(deal)}>✎</button><button className="strateg-icon-btn" title={t('deal_delete')} onClick={() => dataStore.deleteDeal(deal.id)}>🗑</button></div></div>)}</div>}
         </div>
       </div>
+
+      <BookSuggestion moduleId="deals" />
+      <SolutionSteps moduleId="deals" />
+      <DealModal isOpen={modalDeal !== undefined} item={modalDeal || undefined} onClose={() => setModalDeal(undefined)} onSave={() => setModalDeal(undefined)} />
 
       {chatContext && (
         <div className="strateg-modal-overlay">

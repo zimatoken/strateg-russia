@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import pino from 'pino';
 import BusinessNav from './components/BusinessNav';
-import ChatInterfaceNextGen from './components/strateg-russia/ChatInterfaceNextGen';
 import { getEnabledModules, type BusinessModule } from './modules/registry';
 import CoursePage from './pages/CoursePage';
 import PlanPage from './pages/PlanPage';
@@ -10,6 +9,7 @@ import DealsPage from './pages/DealsPage';
 import Dashboard from './pages/Dashboard';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ChatsPage from './pages/ChatsPage';
+import MessengerPage from './pages/MessengerPage';
 import { getDialogCore } from './core/dialogCore';
 import {
   clearDeepLinkUrl,
@@ -19,12 +19,18 @@ import {
 import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './context/LanguageContext';
 import SyncStatus from './components/SyncStatus';
+import AuditPage from './pages/AuditPage';
+import { markAuditReminderShown, shouldShowAuditReminder } from './core/auditEngine';
+import { useToast } from './hooks/useToast';
+import { ToastContainer } from './components/ui/Toast';
 
 const logger = pino({ name: 'strateg-app' });
 
 function App() {
   const { isDark, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLanguage();
+  const { toasts, showToast, removeToast } = useToast();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [path, setPath] = useState(() => window.location.pathname);
   const [connectionState, setConnectionState] = useState(() => getDialogCore().getConnectionState());
   const [deepLinkTargetId] = useState<string | null>(() => {
@@ -55,6 +61,13 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (shouldShowAuditReminder()) {
+      showToast(t('audit_reminder'), 'info');
+      markAuditReminderShown();
+    }
+  }, [showToast, t]);
+
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
     setPath(nextPath);
@@ -65,11 +78,12 @@ function App() {
     if (path === '/dashboard') return <Dashboard />;
     if (path === '/analytics') return <AnalyticsPage />;
     if (path === '/chats') return <ChatsPage />;
+    if (path === '/audit') return <AuditPage />;
     if (path === '/modules/course') return <CoursePage />;
     if (path === '/modules/plan') return <PlanPage />;
     if (path === '/modules/barter') return <BarterPage />;
     if (path === '/modules/deals') return <DealsPage />;
-    if (path === '/chat') return <ChatInterfaceNextGen deepLinkTargetId={deepLinkTargetId} />;
+    if (path === '/messenger' || path === '/chat') return <MessengerPage deepLinkTargetId={deepLinkTargetId} />;
     return (
       <section className="strateg-dashboard">
         <div className="strateg-dashboard-hero">
@@ -78,7 +92,7 @@ function App() {
         </div>
         <div className="strateg-dashboard-meta"><span><i className="strateg-status-dot" /> P2P {connectionState.connectionStatus === 'connected' ? t('status_connected') : t('status_connecting')}</span><strong>{t('id_label')} {connectionState.currentStrategId ?? t('status_creating')}</strong></div>
         <div className="strateg-dashboard-grid">
-          {getEnabledModules().map((module) => <button className="strateg-dashboard-card" key={module.id} onClick={() => navigate(module.path)}><span className="strateg-card-icon">{module.icon}</span><span className="strateg-card-category">{module.category === 'diagnostics' ? t('diagnostics_category') : module.category === 'planning' ? t('planning_category') : module.category === 'exchange' ? t('exchange_category') : t('negotiations_category')}</span><h2>{module.title}</h2><p>{module.description}</p><span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span></button>)}
+          {getEnabledModules().map((module) => <button className="strateg-dashboard-card" key={module.id} onClick={() => navigate(module.path)}><span className="strateg-card-icon">{module.icon}</span><span className="strateg-card-category">{module.category === 'diagnostics' ? t('diagnostics_category') : module.category === 'planning' ? t('planning_category') : module.category === 'exchange' ? t('exchange_category') : module.category === 'communication' ? t('messenger_title') : t('negotiations_category')}</span><h2>{module.title}</h2><p>{module.description}</p><span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span></button>)}
           <button className="strateg-dashboard-card strateg-chat-card" onClick={() => navigate('/chat')}><span className="strateg-card-icon">💬</span><span className="strateg-card-category">{t('dashboard_chat_card_category')}</span><h2>{t('dashboard_chat_card_title')}</h2><p>{t('dashboard_chat_card_description')}</p><span className="strateg-card-arrow">{t('dashboard_card_open')} <b>→</b></span></button>
         </div>
       </section>
@@ -88,6 +102,7 @@ function App() {
   return (
     <div className="strateg-app">
       <header className="strateg-header">
+        <button type="button" className="strateg-mobile-menu-btn" onClick={() => setIsMobileNavOpen(true)} aria-label={t('mobile_menu')}>☰</button>
         <button className="strateg-brand" onClick={() => navigate('/')}><span className="strateg-brand-mark">S</span><span><strong>{t('app_title')}</strong><small>{t('app_subtitle')}</small></span></button>
         <div className="strateg-header-actions">
           <button onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: '700', marginRight: '8px' }}>{lang === 'ru' ? 'RU' : 'EN'}</button>
@@ -97,8 +112,9 @@ function App() {
           <button className="strateg-profile-btn" onClick={() => navigate('/chat')} aria-label="Открыть диалог">◉</button>
         </div>
       </header>
-      <div className="strateg-shell"><BusinessNav activeModule={activeModule} onModuleSelect={(module: BusinessModule) => navigate(module.path)} /><main className="strateg-content">{renderContent()}</main></div>
+      <div className="strateg-shell">{path !== '/messenger' && path !== '/chat' && <BusinessNav activeModule={activeModule} isMobileOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} onModuleSelect={(module: BusinessModule) => navigate(module.path)} onAuditSelect={() => navigate('/audit')} />}<main className="strateg-content">{renderContent()}</main></div>
       <footer className="strateg-footer"><span>{t('footer_title')}</span><span>{t('footer_version')}</span></footer>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
