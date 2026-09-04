@@ -559,7 +559,7 @@ export class StrategDialogCore implements DialogCore {
       this.transport = new P2PTransport(this.identity.getDeviceId());
 
       // relay QR signals from transport to UI listeners
-      this.transport.onQRGenerated((sdp) => {
+      (this.transport as any).onQRGenerated((sdp: string) => {
         this.qrSignalCallbacks.forEach(cb => cb(sdp));
       });
 

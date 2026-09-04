@@ -48,6 +48,18 @@ export class IdentityManager {
   }
 
 
+
+  // Рейтинг и сделки (для будущих модулей)
+  getRating(): number {
+    return parseInt(localStorage.getItem('strateg_rating') || '0', 10);
+  }
+
+  addRating(points: number): void {
+    const current = this.getRating();
+    localStorage.setItem('strateg_rating', String(current + points));
+  }
+}
+
 // Утилита для быстрого доступа без инстанса
 export function getUserId(): string {
   try {
@@ -64,15 +76,5 @@ export function getUserId(): string {
     return id;
   } catch (err) {
     return `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
-  }
-}
-  // Рейтинг и сделки (для будущих модулей)
-  getRating(): number {
-    return parseInt(localStorage.getItem('strateg_rating') || '0', 10);
-  }
-
-  addRating(points: number): void {
-    const current = this.getRating();
-    localStorage.setItem('strateg_rating', String(current + points));
   }
 }
