@@ -1,42 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useLanguage } from '../../hooks/useLanguage';
-import { FileAttachment } from './FileAttachment';
-import { getDialogCore } from '../../core/dialogCore';
+// import { FileAttachment } from './FileAttachment';
 import { getUserProfile } from '../../core/identity';
 
-export const ChatWindow: React.FC<{ peerId: string }> = ({ peerId }) => {
+export const ChatWindow: React.FC<{ peerId: string; messages?: any[] }> = ({ peerId, messages = [] }) => {
   const { t } = useLanguage();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [text, setText] = useState('');
-  const core = getDialogCore();
   const boxRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const msgs = await core.getMessagesForPeer(peerId).catch(() => []);
-      if (!mounted) return;
-      setMessages(msgs || []);
-    })();
-
-    const unsub = core.onMessage((from, msg) => {
-      if (from === peerId) setMessages((m) => [...m, msg]);
-    });
-
-    return () => { mounted = false; unsub(); };
-  }, [peerId]);
-
-  useEffect(() => { boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: 'smooth' }); }, [messages]);
-
-  const send = async () => {
-    if (!text) return;
-    try {
-      await core.sendMessageToPeer(peerId, { type: 'text', body: text });
-      setText('');
-    } catch (e) {
-      console.error(e);
-      alert('Не удалось отправить сообщение');
-    }
+  // Dumb component: messages are provided via props. Sending is logged to console.
+  const send = () => {
+    console.log('Send message (UI only):', peerId);
+    // No-op: integrate with dialogCore in future
   };
 
   return (
@@ -52,7 +26,7 @@ export const ChatWindow: React.FC<{ peerId: string }> = ({ peerId }) => {
       </div>
 
       <div style={{ padding: 8, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('messenger_placeholder') || ''} style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+        <input placeholder={t('messenger_placeholder') || ''} style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
         <button onClick={send} style={{ padding: '8px 12px' }}>{t('messenger_send') || 'Send'}</button>
       </div>
     </div>

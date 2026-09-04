@@ -5,7 +5,7 @@ import { getDialogCore, type FileAttachment, type Message } from "../../core/dia
 import { onBroadcast, sendBroadcast } from "../../core/broadcast";
 import { useToast } from "../../hooks/useToast";
 import { ToastContainer } from "../../components/ui/Toast";
-import QRShare from "../../components/QRShare";
+import { QRShare } from "../../components/QRShare";
 import { isValidStrategId } from "../../core/deepLink";
 import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush, getNotificationPermission } from "../../core/pushNotifications";
 import GroupList from "../../components/GroupList";

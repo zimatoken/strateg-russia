@@ -528,11 +528,11 @@ export class StrategDialogCore implements DialogCore {
       // Auto-add contact when P2P manager reports an open transport
       p2pManager.onOpen(async (peerId) => {
         try {
-          await getOrCreateContact(peerId, { id: peerId, name: peerId });
-          updateBadge();
+          await getOrCreateContact(peerId);
+          updateBadge(0);
           this.qrSignalCallbacks.forEach(cb => cb(`connected:${peerId}`));
         } catch (e) {
-          logger.warn('Failed to add contact on p2p open', e);
+          logger.warn('Failed to add contact on p2p open');
         }
       });
     }
