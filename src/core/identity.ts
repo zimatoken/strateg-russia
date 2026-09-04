@@ -47,6 +47,13 @@ export class IdentityManager {
     return id;
   }
 
+  getUserProfile(): { id: string; name: string | null; avatar?: string | null } {
+    const id = this.getUserId();
+    const name = this.userName || localStorage.getItem('strateg_user_name');
+    const avatar = localStorage.getItem('strateg_user_avatar');
+    return { id, name, avatar };
+  }
+
 
 
   // Рейтинг и сделки (для будущих модулей)
@@ -77,4 +84,11 @@ export function getUserId(): string {
   } catch (err) {
     return `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
   }
+}
+
+export function getUserProfile(): { id: string; name: string | null; avatar?: string | null } {
+  const id = getUserId();
+  const name = localStorage.getItem('strateg_user_name');
+  const avatar = localStorage.getItem('strateg_user_avatar');
+  return { id, name, avatar };
 }

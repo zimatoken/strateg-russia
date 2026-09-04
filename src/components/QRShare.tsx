@@ -1,75 +1,55 @@
-import { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { getDialogCore } from '../core/dialogCore';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface QRShareProps {
-  strategId?: string | null;
-  value?: string;
-  onClose?: () => void;
+  value: string;
+  onScan?: (data: string) => void;
+  status?: 'idle' | 'connecting' | 'connected' | 'error';
 }
 
-export default function QRShare({ strategId, value, onClose }: QRShareProps) {
-  const [displayValue, setDisplayValue] = useState<string>(value || (strategId ? `STRATEG:${strategId}` : ''));
-  const [signalData, setSignalData] = useState<string | null>(null);
-  const [pasteInput, setPasteInput] = useState('');
+export const QRShare: React.FC<QRShareProps> = ({ value, onScan, status = 'idle' }) => {
+  const { t } = useLanguage();
+  const [inputValue, setInputValue] = useState('');
 
-  useEffect(() => {
-    // subscribe to generated SDP/QR signals from dialog core
-    const core = getDialogCore();
-    const unsub = core.onQRSignal((sdp) => {
-      setSignalData(sdp);
-      setDisplayValue(sdp);
-    });
-
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (value) setDisplayValue(value);
-    else if (strategId) setDisplayValue(`STRATEG:${strategId}`);
-  }, [value, strategId]);
-
-  const handlePasteSubmit = async () => {
-    const core = getDialogCore();
-    const text = pasteInput.trim();
-    if (!text) return;
-    try {
-      // Try to accept remote SDP/signal via dialog core
-      if (typeof core.acceptRemoteSignal === 'function') {
-        await core.acceptRemoteSignal(text);
-      }
-      setPasteInput('');
-      if (onClose) onClose();
-    } catch (err) {
-      console.error('Failed to apply remote signal:', err);
-      alert('Не удалось применить сигнал. Проверьте формат.');
+  const handleSubmit = () => {
+    if (inputValue && onScan) {
+      onScan(inputValue);
+      setInputValue('');
     }
   };
 
+  const statusText: Record<string, string> = {
+    idle: t('messenger_scan') || 'Ожидание сканирования',
+    connecting: t('messenger_connecting') || 'Подключение...',
+    connected: t('messenger_connected') || 'Подключено',
+    error: 'Ошибка соединения',
+  };
+
   return (
-    <div className="qr-share" style={{ color: 'var(--text-primary)', background: 'var(--bg-card)', padding: 16, borderRadius: 12 }}>
-      <button className="modal-close" onClick={onClose} style={{ float: 'right' }}>×</button>
-      <div style={{ display: 'grid', placeItems: 'center', gap: 12 }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontWeight: 800, marginBottom: 6, color: 'var(--heading-color, var(--text-primary))' }}>Отсканируйте для подключения</div>
-          <div style={{ color: 'var(--subtext-color, var(--text-secondary))' }}>QR для обмена идентификатором или сигналами P2P</div>
-        </div>
-        <div style={{ padding: 8, background: 'var(--bg-secondary)', borderRadius: 8 }}>
-          <QRCodeSVG value={displayValue || ''} size={240} bgColor="#ffffff" fgColor="#0c1426" />
-        </div>
-
-        {signalData && <div style={{ fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all' }}>Сгенерирован сигнал P2P (сканируйте вторым устройством)</div>}
-
-        <div style={{ width: '100%', display: 'grid', gap: 8 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Вставьте отсканированные данные (если необходимо)</label>
-          <textarea value={pasteInput} onChange={e => setPasteInput(e.target.value)} rows={4} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-qr" onClick={handlePasteSubmit} style={{ padding: '8px 12px' }}>Применить</button>
-            <button onClick={() => { navigator.clipboard?.writeText(displayValue || ''); }} style={{ padding: '8px 12px' }}>Копировать</button>
-          </div>
-        </div>
+    <div className="qr-share" style={{ textAlign: 'center', padding: '1rem' }}>
+      <div style={{ background: '#fff', display: 'inline-block', padding: '0.5rem', borderRadius: '8px' }}>
+        <QRCodeSVG value={value} size={220} level="H" includeMargin />
       </div>
+      <p style={{ margin: '0.5rem 0', fontWeight: 'bold', color: 'var(--text)' }}>
+        {statusText[status]}
+      </p>
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+        <input
+          type="text"
+          placeholder="Вставьте данные из QR"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg)', color: 'var(--text)' }}
+        />
+        <button onClick={handleSubmit} style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px' }}>
+          Подключиться
+        </button>
+      </div>
+      <button onClick={() => navigator.clipboard?.writeText(value)} style={{ marginTop: '0.5rem', background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>
+        Скопировать данные
+      </button>
     </div>
   );
-}
+};
 

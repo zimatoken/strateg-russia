@@ -4,16 +4,47 @@
 import { ITransport } from './transport';
 import { QRSignaling } from './signaling';
 
+const CHUNK_SIZE = 16 * 1024; // 16KB
+
+function encodeHeaderAndChunk(header: Record<string, any>, chunk: Uint8Array): ArrayBuffer {
+  const headerStr = JSON.stringify(header);
+  const encoder = new TextEncoder();
+  const headerBytes = encoder.encode(headerStr);
+  const headerLen = headerBytes.length;
+  const buffer = new ArrayBuffer(4 + headerLen + chunk.byteLength);
+  const view = new DataView(buffer);
+  view.setUint32(0, headerLen);
+  const uint8 = new Uint8Array(buffer);
+  uint8.set(headerBytes, 4);
+  uint8.set(chunk, 4 + headerLen);
+  return buffer;
+}
+
+function decodeHeaderAndChunk(buffer: ArrayBuffer): { header: any; chunk: Uint8Array } {
+  const view = new DataView(buffer);
+  const headerLen = view.getUint32(0);
+  const uint8 = new Uint8Array(buffer);
+  const headerBytes = uint8.slice(4, 4 + headerLen);
+  const decoder = new TextDecoder();
+  const headerStr = decoder.decode(headerBytes);
+  const header = JSON.parse(headerStr);
+  const chunk = uint8.slice(4 + headerLen);
+  return { header, chunk };
+}
+
 export class P2PTransport implements ITransport {
   private peerConnection: RTCPeerConnection | null = null;
   private dataChannel: RTCDataChannel | null = null;
-  private messageCallbacks: ((data: any) => void)[] = [];
-  private connectCallbacks: (() => void)[] = [];
-  private disconnectCallbacks: (() => void)[] = [];
+  private textCallbacks: ((data: any) => void)[] = [];
+  private binaryCallbacks: ((data: { fileId: string; data: ArrayBuffer; meta?: any }) => void)[] = [];
+  private openCallbacks: (() => void)[] = [];
+  private closeCallbacks: (() => void)[] = [];
+  private errorCallbacks: ((err: any) => void)[] = [];
   private qrGeneratedCallbacks: ((sdpData: string) => void)[] = [];
   private connected = false;
   private peerId: string;
   private signaling: QRSignaling;
+  private incomingChunks: Map<string, { chunks: Map<number, Uint8Array>; total: number; meta?: any }> = new Map();
 
   constructor(peerId: string) {
     this.peerId = peerId;
@@ -33,11 +64,9 @@ export class P2PTransport implements ITransport {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        // QR-код будет показан через signaling
         const sdp = this.peerConnection?.localDescription;
         if (sdp) {
           const qrData = this.signaling.generateSignalData(sdp);
-          console.log('[P2P] QR-данные для обмена:', qrData);
           this.qrGeneratedCallbacks.forEach(cb => cb(qrData));
         }
       }
@@ -45,29 +74,67 @@ export class P2PTransport implements ITransport {
 
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
-
-    // Ждём ответ через QR
-    console.log('[P2P] Ожидание SDP-ответа через QR...');
   }
 
   private setupDataChannel(): void {
     if (!this.dataChannel) return;
+    this.dataChannel.binaryType = 'arraybuffer';
     this.dataChannel.onopen = () => {
       this.connected = true;
-      this.connectCallbacks.forEach(cb => cb());
-      console.log('[P2P] DataChannel открыт');
+      this.openCallbacks.forEach(cb => cb());
     };
     this.dataChannel.onclose = () => {
       this.connected = false;
-      this.disconnectCallbacks.forEach(cb => cb());
-      console.log('[P2P] DataChannel закрыт');
+      this.closeCallbacks.forEach(cb => cb());
+    };
+    this.dataChannel.onerror = (ev) => {
+      this.errorCallbacks.forEach(cb => cb(ev));
     };
     this.dataChannel.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        this.messageCallbacks.forEach(cb => cb(data));
+        if (typeof event.data === 'string') {
+          const obj = JSON.parse(event.data);
+          this.textCallbacks.forEach(cb => cb(obj));
+          return;
+        }
+
+        // Binary message with header
+        if (event.data instanceof ArrayBuffer) {
+          const { header, chunk } = decodeHeaderAndChunk(event.data as ArrayBuffer);
+          const fileId = header.fileId;
+          const index = header.index;
+          const total = header.total;
+          const meta = header.meta;
+
+          let entry = this.incomingChunks.get(fileId);
+          if (!entry) {
+            entry = { chunks: new Map(), total, meta };
+            this.incomingChunks.set(fileId, entry);
+          }
+          entry.chunks.set(index, chunk);
+
+          if (entry.chunks.size === total) {
+            // assemble
+            const parts: Uint8Array[] = [];
+            for (let i = 0; i < total; i++) {
+              const part = entry.chunks.get(i)!;
+              parts.push(part);
+            }
+            const totalLen = parts.reduce((s, p) => s + p.byteLength, 0);
+            const assembled = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const p of parts) {
+              assembled.set(p, offset);
+              offset += p.byteLength;
+            }
+            this.incomingChunks.delete(fileId);
+            this.binaryCallbacks.forEach(cb => cb({ fileId, data: assembled.buffer, meta }));
+          }
+
+          return;
+        }
       } catch (e) {
-        console.warn('[P2P] Невалидный JSON:', event.data);
+        this.errorCallbacks.forEach(cb => cb(e));
       }
     };
   }
@@ -84,39 +151,87 @@ export class P2PTransport implements ITransport {
     if (type === 'offer') {
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
-      // Показываем QR с ответом
       const localDesc = this.peerConnection.localDescription;
       if (localDesc) {
         const qrData = this.signaling.generateSignalData(localDesc);
-        console.log('[P2P] QR-ответ для обмена:', qrData);
         this.qrGeneratedCallbacks.forEach(cb => cb(qrData));
       }
     }
   }
 
-  send(data: any): void {
+  send(obj: any): void {
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
-      this.dataChannel.send(JSON.stringify(data));
+      try {
+        const str = JSON.stringify(obj);
+        this.dataChannel.send(str);
+      } catch (err) {
+        this.errorCallbacks.forEach(cb => cb(err));
+      }
     } else {
-      console.warn('[P2P] DataChannel не готов для отправки');
+      this.errorCallbacks.forEach(cb => cb(new Error('DataChannel not open')));
+    }
+  }
+
+  // send ArrayBuffer with chunking
+  sendBinary(arrayBuffer: ArrayBuffer, meta?: any): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      this.errorCallbacks.forEach(cb => cb(new Error('DataChannel not open')));
+      return;
+    }
+
+    const total = Math.ceil(arrayBuffer.byteLength / CHUNK_SIZE);
+    const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    for (let i = 0; i < total; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, arrayBuffer.byteLength);
+      const chunk = new Uint8Array(arrayBuffer.slice(start, end));
+      const header = { fileId, index: i, total, meta };
+      const packed = encodeHeaderAndChunk(header, chunk);
+      try {
+        this.dataChannel.send(packed);
+      } catch (err) {
+        this.errorCallbacks.forEach(cb => cb(err));
+      }
     }
   }
 
   onMessage(callback: (data: any) => void): void {
-    this.messageCallbacks.push(callback);
+    this.textCallbacks.push(callback);
   }
 
+  onBinary(callback: (data: { fileId: string; data: ArrayBuffer; meta?: any }) => void): void {
+    this.binaryCallbacks.push(callback);
+  }
+
+  onOpen(callback: () => void): void {
+    this.openCallbacks.push(callback);
+  }
+
+  onClose(callback: () => void): void {
+    this.closeCallbacks.push(callback);
+  }
+
+  // Compatibility with ITransport interface
   onConnect(callback: () => void): void {
-    this.connectCallbacks.push(callback);
+    this.onOpen(callback);
   }
 
   onDisconnect(callback: () => void): void {
-    this.disconnectCallbacks.push(callback);
+    this.onClose(callback);
   }
 
-  onQRGenerated(callback: (sdpData: string) => void): void {
-    this.qrGeneratedCallbacks.push(callback);
+  onError(callback: (err: any) => void): void {
+    this.errorCallbacks.push(callback);
   }
+
+  onQRGenerated(callback: (sdpData: string) => void): () => void {
+    this.qrGeneratedCallbacks.push(callback);
+    return () => {
+      this.qrGeneratedCallbacks = this.qrGeneratedCallbacks.filter(c => c !== callback);
+    };
+  }
+
+  onBinaryGenerated?(): void {}
 
   isConnected(): boolean {
     return this.connected;
@@ -128,13 +243,98 @@ export class P2PTransport implements ITransport {
 
   disconnect(): void {
     if (this.dataChannel) {
-      this.dataChannel.close();
+      try { this.dataChannel.close(); } catch {};
       this.dataChannel = null;
     }
     if (this.peerConnection) {
-      this.peerConnection.close();
+      try { this.peerConnection.close(); } catch {};
       this.peerConnection = null;
     }
     this.connected = false;
   }
+}
+
+// Manager to hold multiple transports keyed by peerId
+export class P2PManager {
+  private transports: Map<string, P2PTransport> = new Map();
+  private openCallbacks: ((peerId: string) => void)[] = [];
+  private closeCallbacks: ((peerId: string) => void)[] = [];
+  private messageCallbacks: ((peerId: string, data: any) => void)[] = [];
+  private binaryCallbacks: ((peerId: string, payload: { fileId: string; data: ArrayBuffer; meta?: any }) => void)[] = [];
+  private errorCallbacks: ((peerId: string, err: any) => void)[] = [];
+
+  createTransport(peerId: string): P2PTransport {
+    if (this.transports.has(peerId)) return this.transports.get(peerId)!;
+    const t = new P2PTransport(peerId);
+    t.onOpen(() => this.openCallbacks.forEach(cb => cb(peerId)));
+    t.onClose(() => this.closeCallbacks.forEach(cb => cb(peerId)));
+    t.onMessage((data) => this.messageCallbacks.forEach(cb => cb(peerId, data)));
+    t.onBinary((payload) => this.binaryCallbacks.forEach(cb => cb(peerId, payload)));
+    t.onError((err) => this.errorCallbacks.forEach(cb => cb(peerId, err)));
+    this.transports.set(peerId, t);
+    return t;
+  }
+
+  getTransport(peerId: string): P2PTransport | undefined {
+    return this.transports.get(peerId);
+  }
+
+  async connectTo(peerId: string): Promise<P2PTransport> {
+    const t = this.createTransport(peerId);
+    await t.connect();
+    return t;
+  }
+
+  sendBinaryTo(peerId: string, buffer: ArrayBuffer, meta?: any): void {
+    const t = this.transports.get(peerId);
+    if (!t) throw new Error('Transport not found');
+    t.sendBinary(buffer, meta);
+  }
+
+  onOpen(cb: (peerId: string) => void) { this.openCallbacks.push(cb); }
+  onClose(cb: (peerId: string) => void) { this.closeCallbacks.push(cb); }
+  onMessage(cb: (peerId: string, data: any) => void) { this.messageCallbacks.push(cb); }
+  onBinary(cb: (peerId: string, payload: { fileId: string; data: ArrayBuffer; meta?: any }) => void) { this.binaryCallbacks.push(cb); }
+  onError(cb: (peerId: string, err: any) => void) { this.errorCallbacks.push(cb); }
+}
+
+// Export a singleton manager for app-wide usage
+export const p2pManager = new P2PManager();
+
+// High-level helpers for QR/offer flows
+export async function createOfferFor(peerId?: string): Promise<string> {
+  const id = peerId || `peer_${Date.now().toString(36).slice(-6)}`;
+  const t = p2pManager.createTransport(id);
+  return new Promise<string>(async (resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Offer generation timeout')), 10000);
+    const unsub = t.onQRGenerated ? t.onQRGenerated((sdpData: string) => {
+      clearTimeout(timeout);
+      // @ts-ignore
+      if (typeof unsub === 'function') unsub();
+      resolve(sdpData);
+    }) : null;
+    try {
+      await t.connect();
+    } catch (err) {
+      clearTimeout(timeout);
+      reject(err);
+    }
+  });
+}
+
+export async function acceptOffer(sdpData: string, peerId?: string): Promise<P2PTransport> {
+  const id = peerId || `peer_${Date.now().toString(36).slice(-6)}`;
+  const t = p2pManager.createTransport(id);
+  // ensure transport peerConnection exists
+  await t.connect();
+  await t.setRemoteSDP(sdpData);
+  return new Promise<P2PTransport>((resolve, reject) => {
+    const to = setTimeout(() => reject(new Error('Accept offer timeout')), 10000);
+    const onOpen = () => {
+      clearTimeout(to);
+      t.onOpen(() => {}); // noop to keep signature
+      resolve(t);
+    };
+    t.onOpen(onOpen);
+  });
 }

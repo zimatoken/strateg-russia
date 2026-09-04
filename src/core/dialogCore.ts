@@ -11,7 +11,7 @@ import type { ReplyTo } from '../types/message';
 import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage, importPrivateKey, exportSharedSecret, importSharedSecret } from './crypto';
 // P2P transport imports
 import { ITransport } from './transport';
-import { P2PTransport } from './p2p';
+import { P2PTransport, p2pManager, acceptOffer } from './p2p';
 import { IdentityManager } from './identity';
 
 const logger = pino({ name: 'strateg-russia-core' });
@@ -205,7 +205,7 @@ function parseWirePayload(payload: string): ParsedWirePayload {
   return { text: decoded };
 }
 
-export type MessageStatus = 'sent' | 'delivered' | 'read';
+export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read';
 
 export interface Message {
   id: string;
@@ -302,6 +302,10 @@ export class StrategDialogCore implements DialogCore {
   private readonly MAX_MISSED_PINGS = 3;
   // Incoming chunk assembly (simpler array-based collector)
   private incomingChunks: Map<string, { chunks: string[]; total: number; from: string; timestamp: number }> = new Map();
+  // Pending send queue: messageId -> { record, attempts, timeout }
+  private pendingMessages: Map<string, { record: MessageRecord; attempts: number; timeout: ReturnType<typeof setTimeout> | null; to: string }> = new Map();
+  private readonly ACK_TIMEOUT = 10000; // 10 seconds
+  private readonly MAX_RETRIES = 3;
   private readonly CLEANUP_INTERVAL_DAYS = 30; // 30 дней
 
   private getUnreadCounts(): Record<string, number> {
@@ -520,6 +524,17 @@ export class StrategDialogCore implements DialogCore {
           .then(reg => console.log('📦 SW registered:', reg.scope))
           .catch(err => console.log('❌ SW registration failed:', err));
       }
+
+      // Auto-add contact when P2P manager reports an open transport
+      p2pManager.onOpen(async (peerId) => {
+        try {
+          await getOrCreateContact(peerId, { id: peerId, name: peerId });
+          updateBadge();
+          this.qrSignalCallbacks.forEach(cb => cb(`connected:${peerId}`));
+        } catch (e) {
+          logger.warn('Failed to add contact on p2p open', e);
+        }
+      });
     }
   }
 
@@ -564,7 +579,7 @@ export class StrategDialogCore implements DialogCore {
       });
 
       // Настраиваем callbacks
-      this.transport.onMessage(async (data) => {
+      this.transport!.onMessage(async (data) => {
         try {
           // CHUNK handling (assemble on client)
           if (data.type === 'CHUNK') {
@@ -655,7 +670,12 @@ export class StrategDialogCore implements DialogCore {
           } else if (data.type === 'SENT' || data.type === 'ACK') {
             const messageId = data.messageId || data.id;
             if (messageId) {
-              console.log(`✅ Message sent: ${messageId}`);
+              console.log(`✅ Message acked: ${messageId}`);
+              const pending = this.pendingMessages.get(messageId);
+              if (pending) {
+                if (pending.timeout) clearTimeout(pending.timeout);
+                this.pendingMessages.delete(messageId);
+              }
               this.updateMessageStatus(messageId, 'delivered');
               markMessageDelivered(messageId).catch(err => logger.error({ err }, 'Failed to mark delivered'));
             }
@@ -713,7 +733,23 @@ export class StrategDialogCore implements DialogCore {
         }
       });
 
-      this.transport.onConnect(() => {
+      // Binary handler (if transport supports it)
+      try {
+        const anyT = this.transport as any;
+        if (anyT.onBinary && typeof anyT.onBinary === 'function') {
+          anyT.onBinary((payload: { fileId: string; data: ArrayBuffer; meta?: any }) => {
+            try {
+              this.handleIncomingBinary(payload);
+            } catch (err) {
+              console.error('Error handling incoming binary', err);
+            }
+          });
+        }
+      } catch (err) {
+        // ignore if transport doesn't support binary
+      }
+
+      this.transport!.onConnect(async () => {
         console.log('🧊 STRATEG P2P connected');
 
         // Генерируем ID только если его нет
@@ -751,9 +787,22 @@ export class StrategDialogCore implements DialogCore {
 
         // Request push subscription if not already subscribed
         this.requestPushSubscription();
+
+          // При подключении — отправляем все pending сообщения
+          try {
+            const dbMod = await import('./db');
+            if (typeof dbMod.getPendingMessages === 'function') {
+              const pendings = await dbMod.getPendingMessages();
+              pendings.forEach((rec) => {
+                this.enqueuePendingRecord(rec, (rec.to || rec.chatId || '').toUpperCase());
+              });
+            }
+          } catch (err) {
+            console.warn('Failed to load pending messages', err);
+          }
       });
 
-      this.transport.onDisconnect(() => {
+      this.transport!.onDisconnect(() => {
         console.log('🧊 STRATEG P2P disconnected');
         this.clearIntervals();
         this.updateConnectionState({
@@ -768,7 +817,7 @@ export class StrategDialogCore implements DialogCore {
         }, 3000);
       });
 
-      await this.transport.connect();
+      await this.transport!.connect();
 
     } catch (error) {
       console.error('Failed to connect to STRATEG P2P:', error);
@@ -883,7 +932,7 @@ export class StrategDialogCore implements DialogCore {
       timestamp: Date.now(),
       from: this.connectionState.currentStrategId,
       files: attachments.length ? attachments : undefined,
-      status: 'sent',
+      status: 'pending',
       replyTo,
       context,
     };
@@ -904,7 +953,7 @@ export class StrategDialogCore implements DialogCore {
       timestamp: Date.now(),
       isUser: true,
       delivered: false,
-      status: 'sent',
+      status: 'pending',
       replyTo,
     };
     saveMessage(record).catch(err => logger.error({ err }, 'Failed to save message'));
@@ -923,6 +972,7 @@ export class StrategDialogCore implements DialogCore {
       if (attachments.length === 0 && !replyTo) {
         const encodedText = encodeBase64(text);
         this.transport.send(JSON.stringify({ type: 'SEND', to: to.toUpperCase(), payload: encodedText }));
+        this.enqueuePendingRecord(record, to);
       } else {
         // Prepare message payload including files
         const payloadObj = {
@@ -941,8 +991,10 @@ export class StrategDialogCore implements DialogCore {
 
         if (!replyTo && payload.length > MAX_MESSAGE_SIZE) {
           this.sendChunkedMessage(payloadObj);
+          this.enqueuePendingRecord(record, to);
         } else {
           this.transport.send(JSON.stringify({ type: 'SEND', to: to.toUpperCase(), payload }));
+          this.enqueuePendingRecord(record, to);
         }
       }
     } else {
@@ -958,6 +1010,7 @@ export class StrategDialogCore implements DialogCore {
 
         const encodedText = encodeBase64(text);
         this.transport.send(JSON.stringify({ type: 'SEND', to: targetId, payload: encodedText }));
+        this.enqueuePendingRecord(record, targetId);
       } else {
         // Encrypt message
         try {
@@ -971,18 +1024,61 @@ export class StrategDialogCore implements DialogCore {
             messageId,
             timestamp: Date.now()
           }));
+          this.enqueuePendingRecord(record, targetId);
           console.log(`🔐 Sent encrypted message to ${targetId}`);
         } catch (error) {
           console.error('Encryption failed, sending plain text:', error);
           this.notifyError('⚠️ Ошибка шифрования, отправлено открытым текстом');
           const encodedText = encodeBase64(text);
           this.transport.send(JSON.stringify({ type: 'SEND', to: targetId, payload: encodedText }));
+          this.enqueuePendingRecord(record, targetId);
         }
       }
     }
 
     // Broadcast для синхронизации табов
     sendBroadcast('NEW_MESSAGE', { message: userMessage, chatId: to.toUpperCase() });
+  }
+
+  async sendFile(to: string, arrayBuffer: ArrayBuffer, name: string, mime: string): Promise<void> {
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    const record: MessageRecord = {
+      id: messageId,
+      chatId: to.toUpperCase(),
+      text: `[Файл] ${name}`,
+      from: this.connectionState.currentStrategId!,
+      to: to.toUpperCase(),
+      timestamp: Date.now(),
+      isUser: true,
+      delivered: false,
+      status: 'pending',
+    };
+
+    // Persist message record
+    saveMessage(record).catch(err => logger.error({ err }, 'Failed to save file message'));
+
+    // Send binary via transport if possible
+    try {
+      const anyT = this.transport as any;
+      if (anyT && typeof anyT.sendBinary === 'function') {
+        anyT.sendBinary(arrayBuffer, { messageId, fileId, name, mime, timestamp: Date.now(), from: this.connectionState.currentStrategId });
+      } else if (this.transport && this.transport.isConnected()) {
+        // Fallback: send base64 in chunks
+        const b64 = encodeBase64(String.fromCharCode.apply(null, Array.from(new Uint8Array(arrayBuffer))));
+        this.sendChunkedMessage({ id: messageId, chatId: to.toUpperCase(), senderId: this.connectionState.currentStrategId || undefined, text: undefined, files: [{ name, type: mime, size: arrayBuffer.byteLength, data: b64 }], timestamp: Date.now() });
+      } else {
+        // Not connected yet: enqueue for later
+        this.enqueuePendingRecord(record, to);
+        return;
+      }
+
+      // Enqueue for ack/retry handling
+      this.enqueuePendingRecord(record, to);
+    } catch (err) {
+      logger.error({ err }, 'Failed to send file');
+      this.notifyError('Не удалось отправить файл');
+    }
   }
 
   private handleIncomingMessage(data: {
@@ -1054,6 +1150,60 @@ export class StrategDialogCore implements DialogCore {
     sendBroadcast('NEW_MESSAGE', { message: newMessage, chatId: data.from });
   }
 
+  private handleIncomingBinary(payload: { fileId: string; data: ArrayBuffer; meta?: any }): void {
+    const meta = payload.meta || {};
+    const messageId = meta.messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const from = meta.from || meta.senderId || 'unknown';
+    const name = meta.name || 'file';
+    const mime = meta.mime || 'application/octet-stream';
+    const timestamp = meta.timestamp || Date.now();
+
+    // Convert ArrayBuffer to base64 for storage/display
+    const uint8 = new Uint8Array(payload.data);
+    let binary = '';
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    const b64 = typeof globalThis.btoa === 'function' ? globalThis.btoa(binary) : Buffer.from(binary, 'binary').toString('base64');
+
+    const newMessage: Message = this.applyDeletedFlag({
+      id: messageId,
+      text: '',
+      isUser: false,
+      timestamp,
+      from,
+      files: [{ name, type: mime, size: uint8.length, data: b64 }],
+      status: 'delivered'
+    });
+
+    this.messages.push(newMessage);
+    this.persistMessageState(newMessage);
+    this.sortMessages();
+    this.notifyMessagesChange();
+    this.notifyMessageReceived(newMessage);
+
+    const record: MessageRecord = {
+      id: messageId,
+      chatId: from,
+      text: newMessage.text,
+      from,
+      to: this.connectionState.currentStrategId!,
+      timestamp,
+      isUser: false,
+      delivered: true,
+      replyTo: undefined,
+    };
+    saveMessage(record).catch(err => logger.error({ err }, 'Failed to save binary message'));
+    void getOrCreateContact(from.toUpperCase()).then((contact) => {
+      void updateContact(contact.id, {
+        lastMessage: '[Файл]',
+        lastMessageAt: timestamp,
+      });
+    });
+
+    // send ack for the message
+    if (meta.messageId) this.sendAck(meta.messageId);
+    sendBroadcast('NEW_MESSAGE', { message: newMessage, chatId: from });
+  }
+
   private sendChunkedMessage(messageObj: {
     id: string;
     chatId: string;
@@ -1094,6 +1244,51 @@ export class StrategDialogCore implements DialogCore {
     } catch (err) {
       logger.error({ err }, 'Failed to send chunk complete');
     }
+  }
+
+  private enqueuePendingRecord(record: MessageRecord, to: string): void {
+    if (this.pendingMessages.has(record.id)) return;
+    this.pendingMessages.set(record.id, { record, attempts: 0, timeout: null, to });
+    if (this.transport && this.transport.isConnected()) {
+      this.attemptSendPending(record.id);
+    }
+  }
+
+  private attemptSendPending(messageId: string): void {
+    const pending = this.pendingMessages.get(messageId);
+    if (!pending) return;
+    if (!this.transport || !this.transport.isConnected()) return;
+
+    pending.attempts += 1;
+    const rec = pending.record;
+
+    const payloadObj: any = {
+      id: rec.id,
+      chatId: rec.chatId,
+      senderId: rec.from,
+      text: rec.text,
+      timestamp: rec.timestamp
+    };
+
+    try {
+      const encoded = encodeBase64(JSON.stringify(payloadObj));
+      this.transport.send(JSON.stringify({ type: 'SEND', to: pending.to.toUpperCase(), payload: encoded, id: rec.id }));
+    } catch (err) {
+      logger.error({ err }, 'Failed to send pending message');
+    }
+
+    if (pending.timeout) clearTimeout(pending.timeout as any);
+    pending.timeout = setTimeout(() => {
+      const p = this.pendingMessages.get(messageId);
+      if (!p) return;
+      if (p.attempts < this.MAX_RETRIES) {
+        this.attemptSendPending(messageId);
+      } else {
+        if (p.timeout) clearTimeout(p.timeout as any);
+        this.pendingMessages.delete(messageId);
+        this.updateMessageStatus(messageId, 'sent');
+      }
+    }, this.ACK_TIMEOUT);
   }
 
   private register(strategId: string): void {
@@ -1430,7 +1625,7 @@ export class StrategDialogCore implements DialogCore {
       timestamp: r.timestamp,
       from: r.from,
       isDeleted: this.deletedMessageIds.has(r.id),
-      status: r.isUser ? 'sent' : 'delivered',
+      status: (r as any).status ? (r as any).status : (r.isUser ? 'pending' : 'delivered'),
       replyTo: r.replyTo,
     }));
     
@@ -1833,11 +2028,40 @@ export class StrategDialogCore implements DialogCore {
   }
 
   async acceptRemoteSignal(sdpData: string): Promise<void> {
-    if (!this.transport) throw new Error('Transport not initialized');
-    if (typeof (this.transport as any).setRemoteSDP === 'function') {
+    // If we already have a transport, delegate to it
+    if (this.transport && typeof (this.transport as any).setRemoteSDP === 'function') {
       await (this.transport as any).setRemoteSDP(sdpData);
-    } else {
-      throw new Error('Transport does not support remote SDP');
+      return;
+    }
+
+    // Otherwise use p2p acceptOffer flow to establish a transport and attach it
+    try {
+      const t = await acceptOffer(sdpData);
+      this.transport = t as unknown as ITransport;
+      // basic message relay (text/json)
+      (this.transport as any).onMessage((data: any) => {
+        try {
+          if (typeof data === 'string') {
+            const parsed = parseWirePayload(data);
+            const from = (parsed && parsed.replyTo && (parsed as any).senderId) || 'unknown';
+            this.handleIncomingMessage({ id: `msg_${Date.now()}`, from, text: parsed.text || '', files: parsed.files, timestamp: Date.now() });
+            return;
+          }
+          // if transport sends structured objects
+          if (data && typeof data === 'object' && data.type === 'MESSAGE' && data.payload) {
+            const parsed = parseWirePayload(data.payload);
+            this.handleIncomingMessage({ id: data.id || `msg_${Date.now()}`, from: data.from || 'unknown', text: parsed.text || '', files: parsed.files, timestamp: data.timestamp || Date.now() });
+          }
+        } catch (e) { console.error(e); }
+      });
+      if (typeof (this.transport as any).onBinary === 'function') {
+        (this.transport as any).onBinary((payload: { fileId: string; data: ArrayBuffer; meta?: any }) => {
+          try { this.handleIncomingBinary(payload); } catch (e) { console.error(e); }
+        });
+      }
+      (this.transport as any).onQRGenerated((sdp: string) => this.qrSignalCallbacks.forEach(cb => cb(sdp)));
+    } catch (err) {
+      throw err;
     }
   }
 }

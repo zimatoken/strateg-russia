@@ -11,7 +11,7 @@ export interface MessageRecord {
   timestamp: number;
   isUser: boolean;
   delivered: boolean;
-  status?: 'sent' | 'delivered' | 'read';
+  status?: 'pending' | 'sent' | 'delivered' | 'read';
   readAt?: number;
   replyTo?: ReplyTo;
   context?: {
@@ -304,6 +304,28 @@ export async function getAllMessageChatIds(): Promise<string[]> {
     request.onsuccess = () => {
       const chatIds = Array.from(new Set((request.result as MessageRecord[]).map((msg) => msg.chatId)));
       resolve(chatIds);
+    };
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getPendingMessages(): Promise<MessageRecord[]> {
+  if (useFallback) {
+    const all = Array.from(fallbackMemory.values()).flat();
+    return all.filter(m => (m as any).status === 'pending');
+  }
+
+  if (!db) await openDB();
+
+  return new Promise<MessageRecord[]>((resolve, reject) => {
+    const transaction = db!.transaction([MESSAGES_STORE], 'readonly');
+    const store = transaction.objectStore(MESSAGES_STORE);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const messages = (request.result as MessageRecord[]).filter(m => (m as any).status === 'pending' && m.isUser === true);
+      resolve(messages);
     };
 
     request.onerror = () => reject(request.error);
