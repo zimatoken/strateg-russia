@@ -20,6 +20,7 @@ import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './context/LanguageContext';
 import SyncStatus from './components/SyncStatus';
 import AuditPage from './pages/AuditPage';
+import SettingsPage from './pages/SettingsPage';
 import { markAuditReminderShown, shouldShowAuditReminder } from './core/auditEngine';
 import { useToast } from './hooks/useToast';
 import { ToastContainer } from './components/ui/Toast';
@@ -79,6 +80,7 @@ function App() {
     if (path === '/analytics') return <AnalyticsPage />;
     if (path === '/chats') return <ChatsPage />;
     if (path === '/audit') return <AuditPage />;
+    if (path === '/settings') return <SettingsPage />;
     if (path === '/modules/course') return <CoursePage />;
     if (path === '/modules/plan') return <PlanPage />;
     if (path === '/modules/barter') return <BarterPage />;

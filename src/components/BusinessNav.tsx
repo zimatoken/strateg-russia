@@ -23,6 +23,7 @@ export default function BusinessNav({ onModuleSelect, onAuditSelect, isMobileOpe
     analytics: t('analytics_category'),
     chats: t('chats_title'),
     communication: t('messenger_title'),
+    system: t('settings_title'),
   };
 
   return (

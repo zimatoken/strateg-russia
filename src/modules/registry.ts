@@ -7,7 +7,7 @@ export interface BusinessModule {
   title: string;
   description: string;
   icon: string;
-  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation' | 'analytics' | 'chats' | 'communication';
+  category: 'diagnostics' | 'planning' | 'exchange' | 'negotiation' | 'analytics' | 'chats' | 'communication' | 'system';
   enabled: boolean;
   order: number;
 }
@@ -88,6 +88,16 @@ export const BUSINESS_MODULES: BusinessModule[] = [
     category: 'communication',
     enabled: true,
     order: 7
+  },
+  {
+    id: 'settings',
+    path: '/settings',
+    title: 'Настройки',
+    description: 'Тема, язык и профиль пользователя',
+    icon: '⚙️',
+    category: 'system',
+    enabled: true,
+    order: 8
   }
 ];
 
