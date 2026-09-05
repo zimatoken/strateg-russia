@@ -1,11 +1,15 @@
 :root {
   color-scheme: light;
+  --bg: #f8fafc;
   --bg-primary: #f5f7fa;
   --bg-secondary: #ffffff;
   --bg-card: rgba(255, 255, 255, 0.84);
+  --text: #0f172a;
   --text-primary: #0c1426;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
+  --subtext: #475569;
+  --heading: #0f172a;
   --accent-primary: #1a56db;
   --accent-hover: #1e40af;
   --accent-light: #dbeafe;
@@ -16,6 +20,10 @@
   --warning: #d97706;
   --danger: #dc2626;
   --border: #e2e8f0;
+  --input-bg: #ffffff;
+  --input-text: #0f172a;
+  --button-bg: #1a56db;
+  --button-text: #ffffff;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --shadow-hover: 0 8px 40px rgba(26, 86, 219, 0.12);
   --radius: 16px;
@@ -24,24 +32,32 @@
 
 body.dark {
   color-scheme: dark;
+  --bg: #0c1426;
   --bg-primary: #0c1426;
-  --bg-secondary: #1e293b;
-  --bg-card: rgba(30, 41, 59, 0.84);
+  --bg-secondary: #111827;
+  --bg-card: #1e293b;
+  --text: #f8fafc;
   --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text-secondary: #dbe5f2;
+  --text-muted: #94a3b8;
+  --subtext: #cbd5e1;
+  --heading: #ffffff;
   --accent-primary: #3b82f6;
   --accent-hover: #2563eb;
-  --accent-light: rgba(59, 130, 246, 0.2);
+  --accent-light: rgba(59, 130, 246, 0.18);
   --gold: #fbbf24;
   --gold-light: rgba(251, 191, 36, 0.2);
-  --gold-dark: #f59e0b;
+  --gold-dark: #f7d27a;
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
   --border: #334155;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 8px 40px rgba(59, 130, 246, 0.2);
+  --input-bg: #0f172a;
+  --input-text: #f8fafc;
+  --button-bg: #3b82f6;
+  --button-text: #ffffff;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --shadow-hover: 0 8px 40px rgba(59, 130, 246, 0.18);
 }
 
 html,
@@ -69,19 +85,140 @@ body.dark {
 /* Support data-theme="dark" attribute as well as body.dark */
 [data-theme="dark"] {
   --bg: #0c1426;
-  --text: #f1f5f9;
+  --text: #f8fafc;
+  --subtext: #cbd5e1;
+  --heading: #ffffff;
   --card-bg: #1e293b;
   --border: #334155;
-  --shadow: 0 4px 24px rgba(0,0,0,0.3);
-  --heading-color: #f8fafc;
-  --subtext-color: #94a3b8;
-  /* Map existing vars for compatibility */
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --input-bg: #0f172a;
+  --input-text: #f8fafc;
+  --button-bg: #3b82f6;
+  --button-text: #ffffff;
   --bg-primary: #0c1426;
-  --bg-secondary: #1e293b;
-  --bg-card: rgba(30, 41, 59, 0.84);
+  --bg-secondary: #111827;
+  --bg-card: #1e293b;
   --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text-secondary: #dbe5f2;
+  --text-muted: #94a3b8;
+}
+
+body.dark,
+body.dark * {
+  color-scheme: dark;
+}
+
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6,
+body.dark .strateg-dashboard h1,
+body.dark .strateg-dashboard-card h2,
+body.dark .strateg-module-panel h2,
+body.dark .settings-card-header h2,
+body.dark .plan-modal-header h2,
+body.dark .modal-title {
+  color: var(--heading);
+}
+
+body.dark p,
+body.dark li,
+body.dark small,
+body.dark label,
+body.dark span,
+body.dark .strateg-dashboard-card p,
+body.dark .strateg-nav-item small,
+body.dark .strateg-dashboard-hero p,
+body.dark .settings-field span,
+body.dark .settings-profile-preview small,
+body.dark .settings-hint,
+body.dark .strateg-empty-module p,
+body.dark .plan-modal-field span,
+body.dark .modal-subtitle {
+  color: var(--subtext);
+}
+
+body.dark .strateg-header,
+body.dark .strateg-nav,
+body.dark .strateg-dashboard-card,
+body.dark .strateg-module-panel,
+body.dark .strateg-question,
+body.dark .strateg-empty-module,
+body.dark .settings-card,
+body.dark .plan-modal,
+body.dark .strateg-modal-content,
+body.dark .mobile-panel-card,
+body.dark .mobile-input-area,
+body.dark .mobile-chat-view,
+body.dark .mobile-tab-panel {
+  background: var(--card-bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.dark .strateg-brand,
+body.dark .strateg-nav-item,
+body.dark .strateg-dashboard-card,
+body.dark .strateg-module-panel,
+body.dark .strateg-question,
+body.dark .settings-card,
+body.dark .plan-modal,
+body.dark .strateg-modal-content,
+body.dark .strateg-dashboard-meta,
+body.dark .strateg-dashboard-hero,
+body.dark .settings-page {
+  color: var(--text);
+}
+
+body.dark input,
+body.dark textarea,
+body.dark select,
+body.dark .strateg-form-field input,
+body.dark .plan-modal-field input,
+body.dark .plan-modal-field textarea,
+body.dark .settings-field input {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--border);
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: var(--text-muted);
+}
+
+body.dark .strateg-primary-btn,
+body.dark .settings-export-btn,
+body.dark .settings-segment.active,
+body.dark .modal-btn-primary {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+body.dark .strateg-secondary-btn,
+body.dark .settings-segment,
+body.dark .modal-btn-secondary {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+body.dark .strateg-nav-item:hover,
+body.dark .strateg-nav-item.active,
+body.dark .settings-segment.active {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+}
+
+body.dark .strateg-user-id,
+body.dark .strateg-dashboard-meta strong,
+body.dark .my-id,
+body.dark .chat-header-id,
+body.dark .mobile-chat-header-id {
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fef3c7;
 }
 
 button,
