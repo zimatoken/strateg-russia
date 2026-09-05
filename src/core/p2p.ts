@@ -270,11 +270,19 @@ export class P2PTransport implements ITransport {
 
   disconnect(): void {
     if (this.dataChannel) {
-      try { this.dataChannel.close(); } catch {};
+      try {
+        this.dataChannel.close();
+      } catch {
+        // ignore close errors during teardown
+      }
       this.dataChannel = null;
     }
     if (this.peerConnection) {
-      try { this.peerConnection.close(); } catch {};
+      try {
+        this.peerConnection.close();
+      } catch {
+        // ignore close errors during teardown
+      }
       this.peerConnection = null;
     }
     this.connected = false;
@@ -332,20 +340,24 @@ export const p2pManager = new P2PManager();
 export async function createOfferFor(peerId?: string): Promise<string> {
   const id = peerId || `peer_${Date.now().toString(36).slice(-6)}`;
   const t = p2pManager.createTransport(id);
-  return new Promise<string>(async (resolve, reject) => {
+  return await new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Offer generation timeout')), 10000);
     const unsub = t.onQRGenerated ? t.onQRGenerated((sdpData: string) => {
       clearTimeout(timeout);
-      // @ts-ignore
       if (typeof unsub === 'function') unsub();
       resolve(sdpData);
     }) : null;
-    try {
-      await t.connect();
-    } catch (err) {
+
+    if (!unsub) {
+      clearTimeout(timeout);
+      reject(new Error('QR signal callback is unavailable'));
+      return;
+    }
+
+    t.connect().catch((err: unknown) => {
       clearTimeout(timeout);
       reject(err);
-    }
+    });
   });
 }
 

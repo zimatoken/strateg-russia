@@ -271,7 +271,7 @@ export async function getMessagesByContext(contextType: string, contextId: strin
 
 export async function getAllChats(): Promise<ChatRecord[]> {
   if (useFallback) {
-    return Array.from(fallbackChats.values());
+    return Array.from(fallbackChats.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
   }
 
   if (!db) await openDB();
@@ -294,7 +294,13 @@ export async function getAllMessageChatIds(): Promise<string[]> {
     return Array.from(fallbackMemory.keys());
   }
 
-  if (!db) await openDB();
+  if (!db) {
+    await openDB();
+  }
+
+  if (useFallback || !db) {
+    return Array.from(fallbackMemory.keys());
+  }
 
   return new Promise<string[]>((resolve, reject) => {
     const transaction = db!.transaction([MESSAGES_STORE], 'readonly');
@@ -489,6 +495,9 @@ export async function __resetDbForTests(): Promise<void> {
   fallbackGroupChats = new Map();
   fallbackGroupMessages = new Map();
   useFallback = false;
+  if (typeof (await import('./contact')).__resetContactsForTests === 'function') {
+    (await import('./contact')).__resetContactsForTests();
+  }
 
   if (typeof indexedDB !== 'undefined') {
     await new Promise<void>((resolve) => {

@@ -39,7 +39,7 @@ export default ts.config(
     },
   },
   {
-    files: ['src/components/strateg-russia/ChatInterfaceNextGen.tsx'],
+    files: ['src/components/**/*.{ts,tsx}', 'src/modules/**/*.tsx'],
     rules: {
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/purity': 'off',

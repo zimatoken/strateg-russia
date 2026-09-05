@@ -81,7 +81,7 @@ export function getUserId(): string {
       localStorage.setItem(key, id);
     }
     return id;
-  } catch (err) {
+  } catch {
     return `STRATEG-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
   }
 }

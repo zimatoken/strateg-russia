@@ -2,6 +2,51 @@ import 'fake-indexeddb/auto';
 import { beforeEach, vi } from 'vitest';
 import { installMockWebSocket, resetMockWebSockets } from './mocks/ws';
 
+class MockDataChannel {
+  binaryType = 'arraybuffer';
+  readyState = 'open';
+  send = vi.fn();
+  close = vi.fn();
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onmessage: ((event: any) => void) | null = null;
+  onerror: ((event: any) => void) | null = null;
+}
+
+class MockPeerConnection {
+  localDescription: any = null;
+  onicecandidate: ((event: any) => void) | null = null;
+  ondatachannel: ((event: any) => void) | null = null;
+  dataChannel: MockDataChannel | null = null;
+
+  createDataChannel = vi.fn(() => {
+    this.dataChannel = new MockDataChannel();
+    return this.dataChannel;
+  });
+
+  createOffer = vi.fn(async () => ({ type: 'offer', sdp: 'mock-offer-sdp' }));
+  createAnswer = vi.fn(async () => ({ type: 'answer', sdp: 'mock-answer-sdp' }));
+  setLocalDescription = vi.fn(async (description: any) => {
+    this.localDescription = description;
+  });
+  setRemoteDescription = vi.fn(async () => undefined);
+  close = vi.fn();
+}
+
+Object.defineProperty(globalThis, 'RTCPeerConnection', {
+  value: MockPeerConnection,
+  writable: true,
+});
+
+Object.defineProperty(globalThis, 'RTCSessionDescription', {
+  value: class {
+    constructor(public init: any) {
+      Object.assign(this, init);
+    }
+  },
+  writable: true,
+});
+
 const localStorageStore = new Map<string, string>();
 
 const localStorageMock: Storage = {

@@ -198,7 +198,8 @@ function parseWirePayload(payload: string): ParsedWirePayload {
   }
 
   // HOTFIX: decoded binary/JSON without structure — don't render as visible text
-  if (/^[\x00-\x08\x0E-\x1F]/.test(decoded) || (decoded.startsWith('{') && decoded.includes('"files"'))) {
+  const firstCharCode = decoded.charCodeAt(0);
+  if ((firstCharCode >= 0 && firstCharCode < 9) || (firstCharCode >= 14 && firstCharCode < 32) || (decoded.startsWith('{') && decoded.includes('"files"'))) {
     return { text: '' };
   }
 
@@ -532,7 +533,7 @@ export class StrategDialogCore implements DialogCore {
           await getOrCreateContact(peerId);
           updateBadge(0);
           this.qrSignalCallbacks.forEach(cb => cb(`connected:${peerId}`));
-        } catch (e) {
+        } catch {
           logger.warn('Failed to add contact on p2p open');
         }
       });
@@ -708,8 +709,8 @@ export class StrategDialogCore implements DialogCore {
                   sendBroadcast('DATA_SYNC_APPLIED', { timestamp: Date.now() });
                 }
               }
-            } catch (err) {
-              console.error('Failed to apply DATA_SYNC', err);
+            } catch (error) {
+              console.error('Failed to apply DATA_SYNC', error);
               this.notifyError('Не удалось применить синхронизацию данных');
             }
             return;
@@ -746,7 +747,7 @@ export class StrategDialogCore implements DialogCore {
             }
           });
         }
-      } catch (err) {
+      } catch {
         // ignore if transport doesn't support binary
       }
 
@@ -1775,10 +1776,12 @@ export class StrategDialogCore implements DialogCore {
   private async seedContactsFromHistory(): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
-      const { getAllMessageChatIds } = await import('./db');
+      const dbModule = await import('./db');
+      const getAllMessageChatIds = typeof dbModule.getAllMessageChatIds === 'function' ? dbModule.getAllMessageChatIds : null;
+      if (!getAllMessageChatIds) return;
       const chatIds = await getAllMessageChatIds();
       for (const chatId of chatIds) {
-        const normalized = chatId.toUpperCase();
+        const normalized = String(chatId).toUpperCase();
         if (!/^STRATEG-[A-Z0-9]{9}$/.test(normalized)) continue;
         const contact = await getOrCreateContact(normalized);
         if (!contact.lastMessageAt) {
@@ -2064,8 +2067,9 @@ export class StrategDialogCore implements DialogCore {
       }
       (this.transport as any).onQRGenerated((sdp: string) => this.qrSignalCallbacks.forEach(cb => cb(sdp)));
       console.log('[P2P] Соединение установлено с пиром:', (t as any).getPeerId?.() || 'unknown');
-    } catch (err) {
-      throw err;
+    } catch (error) {
+      console.error('[P2P] Failed to accept remote signal:', error);
+      this.notifyError('Не удалось установить P2P-соединение');
     }
   }
 }

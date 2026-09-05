@@ -20,7 +20,7 @@ function generateTabId(): string {
 
 export function initBroadcast(name: string = 'strateg-russia-sync'): BroadcastChannel | null {
   channelName = name;
-  tabId = generateTabId();
+  tabId = tabId || generateTabId();
   isInitialized = true;
 
   // Проверка поддержки BroadcastChannel
@@ -43,7 +43,12 @@ export function initBroadcast(name: string = 'strateg-russia-sync'): BroadcastCh
 
 // Fallback через localStorage + storage event
 function initLocalStorageFallback(channelName: string): void {
-  window.addEventListener('storage', (event) => {
+  const target = globalThis as typeof globalThis & { addEventListener?: (type: string, listener: (event: StorageEvent) => void) => void };
+  if (typeof target.addEventListener !== 'function') {
+    return;
+  }
+
+  target.addEventListener('storage', (event: StorageEvent) => {
     if (event.key === channelName && event.newValue) {
       try {
         const msg = JSON.parse(event.newValue) as BroadcastMessage;
@@ -68,6 +73,10 @@ function notifyListeners(msg: BroadcastMessage): void {
 }
 
 export function sendBroadcast(type: string, payload: any): void {
+  if (!tabId) {
+    tabId = generateTabId();
+  }
+
   const msg: BroadcastMessage = {
     type: type as BroadcastMessage['type'],
     payload,
@@ -79,7 +88,10 @@ export function sendBroadcast(type: string, payload: any): void {
     channel.postMessage(msg);
   } else {
     // Fallback через localStorage
-    localStorage.setItem(channelName, JSON.stringify(msg));
+    const storage = globalThis.localStorage;
+    if (storage) {
+      storage.setItem(channelName, JSON.stringify(msg));
+    }
   }
 }
 

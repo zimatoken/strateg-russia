@@ -105,9 +105,8 @@ class DataStoreClass {
           else if (remoteTs === localTs && JSON.stringify(existing) !== JSON.stringify(r)) {
             // conflict - keep both with modified id
             const newId = r.id + '_conflict_' + Date.now();
-            // @ts-ignore
-            r.id = newId;
-            map.set(r.id, r);
+            const conflictItem = { ...r, id: newId };
+            map.set(newId, conflictItem);
             this.syncStatus = 'conflict';
           }
         }

@@ -50,9 +50,14 @@ function generateRoomId(): string {
 /**
  * Create a new group chat
  */
+function getCurrentUserId(): string | null {
+  const state = getDialogCore().getConnectionState();
+  return state.currentStrategId ?? (state as { currentZimaId?: string | null }).currentZimaId ?? null;
+}
+
 export async function createGroup(name: string, members: string[], avatarId: string = 'avatar-robot'): Promise<GroupChat> {
   const core = getDialogCore();
-  const myId = core.getConnectionState().currentStrategId;
+  const myId = getCurrentUserId() ?? core.getConnectionState().currentStrategId ?? (core.getConnectionState() as { currentZimaId?: string | null }).currentZimaId ?? null;
 
   if (!myId) {
     throw new Error('Not connected');
@@ -99,7 +104,7 @@ export async function createGroup(name: string, members: string[], avatarId: str
  */
 export async function joinGroup(roomId: string): Promise<boolean> {
   const core = getDialogCore();
-  const myId = core.getConnectionState().currentStrategId;
+  const myId = getCurrentUserId() ?? core.getConnectionState().currentStrategId ?? (core.getConnectionState() as { currentZimaId?: string | null }).currentZimaId ?? null;
   
   if (!myId) {
     return false;
@@ -140,7 +145,7 @@ export async function joinGroup(roomId: string): Promise<boolean> {
  */
 export async function leaveGroup(roomId: string): Promise<void> {
   const core = getDialogCore();
-  const myId = core.getConnectionState().currentStrategId;
+  const myId = getCurrentUserId() ?? core.getConnectionState().currentStrategId ?? (core.getConnectionState() as { currentZimaId?: string | null }).currentZimaId ?? null;
   
   if (!myId) {
     return;
@@ -197,7 +202,7 @@ export async function isGroupAdmin(roomId: string, userId: string): Promise<bool
  */
 export async function sendGroupMessage(roomId: string, text: string, files?: File[]): Promise<boolean> {
   const core = getDialogCore();
-  const myId = core.getConnectionState().currentStrategId;
+  const myId = getCurrentUserId() ?? core.getConnectionState().currentStrategId ?? (core.getConnectionState() as { currentZimaId?: string | null }).currentZimaId ?? null;
   
   if (!myId || !core.getConnectionState().isConnected) {
     return false;

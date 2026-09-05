@@ -8,13 +8,17 @@ import { getDialogCore } from './dialogCore';
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
+  const atobImpl = typeof globalThis.atob === 'function' ? globalThis.atob.bind(globalThis) : undefined;
+  if (!atobImpl) {
+    return new Uint8Array();
+  }
+  const rawData = atobImpl(base64);
   const outputArray = new Uint8Array(rawData.length);
-  
+
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
-  
+
   return outputArray;
 }
 
@@ -22,6 +26,9 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
  * Check if push notifications are supported
  */
 export function isPushSupported(): boolean {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') {
+    return false;
+  }
   return 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
@@ -139,14 +146,17 @@ export async function unsubscribeFromPush(): Promise<boolean> {
  * Check if user is subscribed to push notifications
  */
 export function isPushSubscribed(): boolean {
-  return localStorage.getItem('strateg-push-subscribed') === 'true';
+  if (typeof localStorage === 'undefined') {
+    return false;
+  }
+  return localStorage.getItem('zima-push-subscribed') === 'true' || localStorage.getItem('strateg-push-subscribed') === 'true';
 }
 
 /**
  * Get current notification permission status
  */
 export function getNotificationPermission(): NotificationPermission {
-  if (!('Notification' in window)) {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
     return 'denied';
   }
   return Notification.permission;

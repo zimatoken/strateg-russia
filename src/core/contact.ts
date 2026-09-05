@@ -26,7 +26,11 @@ export const AVATAR_LIBRARY = [
 export type AvatarType = (typeof AVATAR_LIBRARY)[number];
 
 const CONTACTS_STORE = 'contacts';
-const fallbackContacts = new Map<string, Contact>();
+export const fallbackContacts = new Map<string, Contact>();
+
+export function __resetContactsForTests(): void {
+  fallbackContacts.clear();
+}
 
 export function generateColorFromId(id: string): string {
   const colors = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];

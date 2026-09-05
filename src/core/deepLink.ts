@@ -2,7 +2,7 @@ import pino from 'pino';
 
 const logger = pino({ name: 'strateg-deeplink' });
 
-export const STRATEG_ID_REGEX = /^STRATEG-[A-Z0-9]{9}$/;
+export const STRATEG_ID_REGEX = /^(?:STRATEG|ZIMA)-[A-Z0-9]{9}$/;
 
 export interface DeepLinkChat {
   action: 'chat';
@@ -18,9 +18,9 @@ export function normalizeStrategId(raw: string): string {
   const trimmed = raw.trim().toUpperCase();
   if (STRATEG_ID_REGEX.test(trimmed)) return trimmed;
 
-  const withoutPrefix = trimmed.replace(/^STRATEG-/, '');
+  const withoutPrefix = trimmed.replace(/^(?:STRATEG|ZIMA)-/, '');
   if (/^[A-Z0-9]{9}$/.test(withoutPrefix)) {
-    return `STRATEG-${withoutPrefix}`;
+    return `ZIMA-${withoutPrefix}`;
   }
 
   return trimmed;
@@ -36,7 +36,7 @@ export const isValidZimaId = isValidStrategId;
 export function parseDeepLink(url: string): DeepLinkChat | null {
   try {
     const trimmed = url.trim();
-    if (!trimmed.toLowerCase().startsWith('strateg://')) {
+    if (!trimmed.toLowerCase().startsWith('strateg://') && !trimmed.toLowerCase().startsWith('zima://')) {
       return null;
     }
 
@@ -63,12 +63,12 @@ export function parseDeepLink(url: string): DeepLinkChat | null {
 
 export function generateDeepLink(id: string): string {
   const normalized = normalizeStrategId(id);
-  return `strateg://chat?id=${encodeURIComponent(normalized)}`;
+  return `zima://chat?id=${encodeURIComponent(normalized)}`;
 }
 
 export function generateWebFallback(id: string): string {
   const normalized = normalizeStrategId(id);
-  return `https://strateg.app/?action=chat&id=${encodeURIComponent(normalized)}`;
+  return `https://zima.app/?action=chat&id=${encodeURIComponent(normalized)}`;
 }
 
 export function generateLocalWebLink(id: string): string {
