@@ -51,7 +51,22 @@ export class P2PTransport implements ITransport {
     this.signaling = new QRSignaling();
   }
 
-  async connect(): Promise<void> {
+  private emitGeneratedSignal(description?: RTCSessionDescription | RTCSessionDescriptionInit): void {
+    const localDescription = description || this.peerConnection?.localDescription;
+    if (!localDescription) return;
+
+    const normalizedDescription = localDescription instanceof RTCSessionDescription
+      ? localDescription
+      : new RTCSessionDescription(localDescription);
+
+    const qrData = this.signaling.generateSignalData(normalizedDescription);
+    console.log('[P2P] Сгенерирован офер:', qrData);
+    this.qrGeneratedCallbacks.forEach(cb => cb(qrData));
+  }
+
+  private async initializePeerConnection(): Promise<void> {
+    if (this.peerConnection) return;
+
     this.peerConnection = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -59,21 +74,33 @@ export class P2PTransport implements ITransport {
       ]
     });
 
-    this.dataChannel = this.peerConnection.createDataChannel('strateg-channel');
-    this.setupDataChannel();
+    this.peerConnection.ondatachannel = (event) => {
+      this.dataChannel = event.channel;
+      this.setupDataChannel();
+    };
 
     this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
+      if (event?.candidate) {
         const sdp = this.peerConnection?.localDescription;
         if (sdp) {
-          const qrData = this.signaling.generateSignalData(sdp);
-          this.qrGeneratedCallbacks.forEach(cb => cb(qrData));
+          this.emitGeneratedSignal(sdp);
         }
+      } else if (this.peerConnection?.localDescription) {
+        this.emitGeneratedSignal(this.peerConnection.localDescription);
       }
     };
 
+    this.dataChannel = this.peerConnection.createDataChannel('strateg-channel');
+    this.setupDataChannel();
+  }
+
+  async connect(): Promise<void> {
+    await this.initializePeerConnection();
+    if (!this.peerConnection) return;
+
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
+    this.emitGeneratedSignal(offer);
   }
 
   private setupDataChannel(): void {
@@ -142,20 +169,20 @@ export class P2PTransport implements ITransport {
   // Метод для установки удалённого SDP (из QR-кода)
   async setRemoteSDP(sdpData: string): Promise<void> {
     const parsed = this.signaling.parseSignalData(sdpData);
-    if (!parsed || !this.peerConnection) return;
+    if (!parsed) return;
+
+    await this.initializePeerConnection();
+    if (!this.peerConnection) return;
 
     const { type, sdp } = parsed;
     const description = new RTCSessionDescription({ type: type as RTCSdpType, sdp });
+    console.log('[P2P] Принимаем удалённый SDP:', type, sdp.slice(0, 120));
     await this.peerConnection.setRemoteDescription(description);
 
     if (type === 'offer') {
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
-      const localDesc = this.peerConnection.localDescription;
-      if (localDesc) {
-        const qrData = this.signaling.generateSignalData(localDesc);
-        this.qrGeneratedCallbacks.forEach(cb => cb(qrData));
-      }
+      this.emitGeneratedSignal(answer);
     }
   }
 
@@ -325,16 +352,25 @@ export async function createOfferFor(peerId?: string): Promise<string> {
 export async function acceptOffer(sdpData: string, peerId?: string): Promise<P2PTransport> {
   const id = peerId || `peer_${Date.now().toString(36).slice(-6)}`;
   const t = p2pManager.createTransport(id);
-  // ensure transport peerConnection exists
-  await t.connect();
   await t.setRemoteSDP(sdpData);
-  return new Promise<P2PTransport>((resolve, reject) => {
-    const to = setTimeout(() => reject(new Error('Accept offer timeout')), 10000);
+
+  // In the browser the data channel may open asynchronously; resolve once the remote SDP is accepted
+  // so the caller can continue the UI flow while WebRTC completes the actual connection handshake.
+  return new Promise<P2PTransport>((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve(t);
+    }, 1000);
+
     const onOpen = () => {
-      clearTimeout(to);
-      t.onOpen(() => {}); // noop to keep signature
+      clearTimeout(timeout);
       resolve(t);
     };
+
     t.onOpen(onOpen);
+
+    if (t.isConnected()) {
+      clearTimeout(timeout);
+      resolve(t);
+    }
   });
 }

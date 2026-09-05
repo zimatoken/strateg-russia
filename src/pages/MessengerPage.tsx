@@ -3,20 +3,35 @@ import { useLanguage } from '../hooks/useLanguage';
 import { getUserId, getUserProfile } from '../core/identity';
 import { p2pManager } from '../core/p2p';
 import { getDialogCore } from '../core/dialogCore';
+import { getAllContacts } from '../core/contact';
 import { QRShare } from '../components/QRShare';
 import ChatWindow from '../modules/messenger/ChatWindow';
 
-export const MessengerPage: React.FC<{ deepLinkTargetId?: string | null }> = () => {
+export const MessengerPage: React.FC<{ deepLinkTargetId?: string | null }> = ({ deepLinkTargetId }) => {
   const { t } = useLanguage();
   const [peerList, setPeerList] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(deepLinkTargetId ?? null);
   const core = getDialogCore();
   const myProfile = getUserProfile();
 
   useEffect(() => {
+    let cancelled = false;
+
+    getAllContacts().then((contacts) => {
+      if (!cancelled) {
+        setPeerList((prev) => Array.from(new Set([...prev, ...contacts.map((contact) => contact.id)])));
+      }
+    }).catch(() => undefined);
+
     p2pManager.onOpen((peerId) => {
-      setPeerList((p) => Array.from(new Set([...p, peerId])));
+      if (!cancelled) {
+        setPeerList((p) => Array.from(new Set([...p, peerId])));
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const qrValue = useMemo(() => `STRATEG:${myProfile?.id || getUserId()}`, [myProfile]);
@@ -26,7 +41,7 @@ export const MessengerPage: React.FC<{ deepLinkTargetId?: string | null }> = () 
       <aside style={{ width: 300, borderRight: '1px solid var(--border)', padding: 12 }}>
         <h3>{t('messenger_title')}</h3>
         <div style={{ margin: '12px 0' }}>
-          <QRShare value={qrValue} onScan={(data) => core.acceptRemoteSignal?.(data)} />
+          <QRShare value={qrValue} onScan={(data) => core.acceptRemoteSignal?.(data)} status="idle" />
         </div>
         <div>
           <h4>{t('messenger_contacts')}</h4>

@@ -29,10 +29,14 @@ export class QRSignaling {
 
   // Получение ID устройства (генерируется при первом запуске)
   private getPeerId(): string {
-    let id = localStorage.getItem('strateg_peer_id');
+    if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
+      return 'peer-' + Math.random().toString(36).substring(2, 10);
+    }
+
+    let id = globalThis.localStorage.getItem('strateg_peer_id');
     if (!id) {
       id = 'peer-' + Math.random().toString(36).substring(2, 10);
-      localStorage.setItem('strateg_peer_id', id);
+      globalThis.localStorage.setItem('strateg_peer_id', id);
     }
     return id;
   }

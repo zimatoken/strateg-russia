@@ -528,6 +528,7 @@ export class StrategDialogCore implements DialogCore {
       // Auto-add contact when P2P manager reports an open transport
       p2pManager.onOpen(async (peerId) => {
         try {
+          console.log('[DialogCore] Контакт добавлен:', peerId);
           await getOrCreateContact(peerId);
           updateBadge(0);
           this.qrSignalCallbacks.forEach(cb => cb(`connected:${peerId}`));
@@ -2028,6 +2029,8 @@ export class StrategDialogCore implements DialogCore {
   }
 
   async acceptRemoteSignal(sdpData: string): Promise<void> {
+    console.log('[P2P] Принимаем SDP из QR/вставки:', sdpData.slice(0, 200));
+
     // If we already have a transport, delegate to it
     if (this.transport && typeof (this.transport as any).setRemoteSDP === 'function') {
       await (this.transport as any).setRemoteSDP(sdpData);
@@ -2060,6 +2063,7 @@ export class StrategDialogCore implements DialogCore {
         });
       }
       (this.transport as any).onQRGenerated((sdp: string) => this.qrSignalCallbacks.forEach(cb => cb(sdp)));
+      console.log('[P2P] Соединение установлено с пиром:', (t as any).getPeerId?.() || 'unknown');
     } catch (err) {
       throw err;
     }
